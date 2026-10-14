@@ -9,13 +9,15 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "screenshots": "node scripts/screenshots.mjs"
+    "screenshots": "node scripts/screenshots.mjs",
+    "test:sim": "esbuild scripts/sim-test.ts --bundle --platform=node --outfile=node_modules/.cache/sim-test.cjs --log-level=error && node node_modules/.cache/sim-test.cjs"
   },
   "dependencies": {
     "three": "^0.186.1"
   },
   "devDependencies": {
     "@types/three": "^0.186.0",
+    "esbuild": "^0.28.2",
     "playwright": "^1.64.1",
     "typescript": "^7.0.2",
     "vite": "^5.4.21"
