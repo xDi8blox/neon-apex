@@ -12,7 +12,8 @@
     "screenshots": "node scripts/screenshots.mjs",
     "test:sim": "esbuild scripts/sim-test.ts --bundle --platform=node --outfile=node_modules/.cache/sim-test.cjs --log-level=error && node node_modules/.cache/sim-test.cjs",
     "test:mobile": "node scripts/mobile-test.mjs",
-    "test:flow": "node scripts/flow-test.mjs"
+    "test:flow": "node scripts/flow-test.mjs",
+    "test:touch": "node scripts/touch-test.mjs"
   },
   "dependencies": {
     "three": "^0.186.1"

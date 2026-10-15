@@ -1152,6 +1152,7 @@ function setLoad(f: number, label: string) { $('ld-fill').style.width = `${Math.
   },
   get state() { return state; },
   get countdown() { return countdown; },
+  get controls() { return input.controls(); },
   get delta() { return document.getElementById('h-delta')!.textContent; },
   get screen() { return screen; },
   get mode() { return mode; },

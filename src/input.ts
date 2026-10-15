@@ -14,7 +14,10 @@ export class Input {
       this.keys.add(e.code);
     });
     window.addEventListener('keyup', e => this.keys.delete(e.code));
-    window.addEventListener('blur', () => this.keys.clear());
+    // never leave a key stuck: clear on focus loss / app switch, and treat modifier-less keyup reliably
+    const clear = () => this.keys.clear();
+    window.addEventListener('blur', clear); window.addEventListener('pagehide', clear);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) clear(); });
   }
   /** One-shot press (consumed). */
   hit(code: string) { const h = this.pressed.has(code); this.pressed.delete(code); return h; }

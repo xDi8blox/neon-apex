@@ -7,20 +7,26 @@ export class TouchControls {
   active = false;
   tilt = localStorage.getItem('neonapex.tilt') === '1';
   private tiltSteer = 0;
-  private held = new Map<string, number>(); // control -> pointer count
+  /** touch identifier -> hold control currently under that finger (null = finger is on no control) */
+  private fingers = new Map<number, string | null>();
+  private holdEls: HTMLElement[] = [];
+  private rects: { key: string; el: HTMLElement; l: number; t: number; r: number; b: number }[] = [];
+  private lastSteer: 'left' | 'right' | null = null;
 
   constructor(private press: (code: string) => void) {
     if (!isTouchDevice()) return;
     this.active = true;
     document.body.classList.add('touch');
     const root = document.getElementById('touch')!;
-    root.querySelectorAll<HTMLElement>('[data-hold]').forEach(el => {
-      const key = el.dataset.hold!;
-      const down = (e: PointerEvent) => { e.preventDefault(); try { el.setPointerCapture?.(e.pointerId); } catch { /* synthetic or already released */ } el.classList.add('on'); this.held.set(key, (this.held.get(key) ?? 0) + 1); this.sync(); };
-      const up = (e: PointerEvent) => { e.preventDefault(); el.classList.remove('on'); this.held.set(key, Math.max(0, (this.held.get(key) ?? 1) - 1)); this.sync(); };
-      el.addEventListener('pointerdown', down);
-      el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up); el.addEventListener('lostpointercapture', up);
-    });
+    this.holdEls = [...root.querySelectorAll<HTMLElement>('[data-hold]')];
+    // Hold controls are driven by raw touch events tracked per identifier over the whole screen, so a finger
+    // can slide between buttons (◀ ▶) and other fingers starting/ending never disturb it.
+    const onTouch = (e: TouchEvent) => this.onTouch(e);
+    for (const t of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) document.addEventListener(t, onTouch as EventListener, { passive: false, capture: true });
+    const clear = () => this.clearAll();
+    window.addEventListener('blur', clear); window.addEventListener('pagehide', clear);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) clear(); });
+    window.addEventListener('resize', () => this.measure()); window.addEventListener('orientationchange', () => this.clearAll());
     root.querySelectorAll<HTMLElement>('[data-tap]').forEach(el =>
       el.addEventListener('pointerdown', e => { e.preventDefault(); this.press(el.dataset.tap!); }));
     // tilt toggle
@@ -68,10 +74,52 @@ export class TouchControls {
     this.tilt = on; localStorage.setItem('neonapex.tilt', on ? '1' : '0'); this.label(); this.sync();
     return on;
   }
-  private h(k: string) { return (this.held.get(k) ?? 0) > 0; }
+  private measure() {
+    this.rects = this.holdEls.map(el => {
+      const r = el.getBoundingClientRect(), pad = 14; // forgiving hit area around each button
+      return { key: el.dataset.hold!, el, l: r.left - pad, t: r.top - pad, r: r.right + pad, b: r.bottom + pad };
+    }).filter(r => r.r - r.l > 2 * 14); // hidden controls have zero size
+  }
+  /** which hold control is under (x, y): nearest center among the padded rects that contain it */
+  private hit(x: number, y: number): string | null {
+    let best: string | null = null, bd = Infinity;
+    for (const r of this.rects) {
+      if (x < r.l || x > r.r || y < r.t || y > r.b) continue;
+      const d = Math.hypot(x - (r.l + r.r) / 2, y - (r.t + r.b) / 2);
+      if (d < bd) { bd = d; best = r.key; }
+    }
+    return best;
+  }
+  private onTouch(e: TouchEvent) {
+    if (!document.body.classList.contains('racing')) { if (this.fingers.size) this.clearAll(); return; }
+    if (e.type === 'touchstart' || !this.rects.length) this.measure();
+    let onControl = false;
+    for (const t of Array.from(e.changedTouches)) {
+      if (e.type === 'touchend' || e.type === 'touchcancel') { this.fingers.delete(t.identifier); continue; }
+      const k = this.hit(t.clientX, t.clientY);
+      if (k) onControl = true;
+      // touchstart on a tap button (pause/cam/tilt) is left to those buttons
+      if (e.type === 'touchstart' && !k) { this.fingers.set(t.identifier, null); continue; }
+      const prev = this.fingers.get(t.identifier);
+      if ((k === 'left' || k === 'right') && k !== prev) this.lastSteer = k;
+      this.fingers.set(t.identifier, k);
+    }
+    // reconcile with the authoritative list of active touches (drops fingers whose end event was lost)
+    const live = new Set(Array.from(e.touches).map(t => t.identifier));
+    for (const id of [...this.fingers.keys()]) if (!live.has(id)) this.fingers.delete(id);
+    if (onControl && e.cancelable) e.preventDefault();
+    this.sync();
+  }
+  /** release everything (blur, app switch, rotation, leaving the race) */
+  clearAll() { this.fingers.clear(); this.lastSteer = null; this.sync(); }
+  private h(k: string) { for (const v of this.fingers.values()) if (v === k) return true; return false; }
   private sync() {
-    const btnSteer = (this.h('right') ? 1 : 0) - (this.h('left') ? 1 : 0);
+    const L = this.h('left'), R = this.h('right');
+    // both held (e.g. a finger sliding across): the most recently entered direction wins
+    const btnSteer = L && R ? (this.lastSteer === 'left' ? -1 : 1) : R ? 1 : L ? -1 : 0;
+    // tilt only steers while no steering button is held
     this.steer = this.tilt && btnSteer === 0 ? this.tiltSteer : btnSteer;
+    for (const el of this.holdEls) el.classList.toggle('on', this.h(el.dataset.hold!));
     this.throttle = this.h('gas') ? 1 : 0;
     this.brake = this.h('brake') ? 1 : 0;
     this.handbrake = this.h('drift');
