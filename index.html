@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="theme-color" content="#05080f" />
-  <meta name="description" content="NEON APEX - a 3D browser racing game built with Three.js" />
-  <title>NEON APEX — Browser Racing</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏁</text></svg>" />
+  <meta name="theme-color" content="#0b0605" />
+  <meta name="description" content="HELLDRIVE - a demonic 3D browser racing game built with Three.js" />
+  <title>HELLDRIVE — Race Through Hell</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔥</text></svg>" />
 </head>
 <body>
   <div id="app"></div>
@@ -24,7 +24,7 @@
     <canvas id="minimap" width="220" height="220"></canvas>
     <canvas id="speedo" width="260" height="260"></canvas>
     <div id="h-cam" class="panel small">CAM: CHASE</div>
-    <div id="nitro"><span>NITRO</span><div class="bar"><div id="nitro-fill"></div></div></div>
+    <div id="nitro"><span>SOUL BURN</span><div class="bar"><div id="nitro-fill"></div></div></div>
     <div id="combo"></div>
     <div id="popups"></div>
     <div id="h-msg"></div>
@@ -36,24 +36,21 @@
     <div class="t-top"><button id="t-pause" data-tap="Escape">II</button><button id="t-cam" data-tap="KeyC">CAM</button><button id="t-tilt">TILT OFF</button><button id="t-fs">⛶</button></div>
     <div class="t-left"><div class="tb steer" data-hold="left">◀</div><div class="tb steer" data-hold="right">▶</div></div>
     <div class="t-right">
-      <div class="col"><div class="tb small nitro" data-hold="nitro">N₂O</div><div class="tb small" data-hold="drift">DRIFT</div></div>
+      <div class="col"><div class="tb small nitro" data-hold="nitro">SOUL</div><div class="tb small" data-hold="drift">DRIFT</div></div>
       <div class="col"><div class="tb brake" data-hold="brake">BRAKE</div><div class="tb gas" data-hold="gas">GAS</div></div>
     </div>
   </div>
   <div id="rotate"><div>⟳</div><p>Rotate your phone to landscape</p></div>
-  <div id="letterbox"><div class="top"></div><div class="bot"><span id="lb-title">NEON APEX</span><em>ENTER / TAP to skip</em></div></div>
+  <div id="letterbox"><div class="top"></div><div class="bot"><span id="lb-title">HELLDRIVE</span><em>ENTER / TAP to skip</em></div></div>
   <div id="wipe"></div>
+  <div id="crack"><svg viewBox="0 0 1000 600" preserveAspectRatio="none"><path d="M500 300 L430 210 L452 140 L380 40 L360 0"/><path d="M500 300 L610 250 L700 268 L820 170 L1000 140"/><path d="M500 300 L560 410 L520 480 L590 600"/><path d="M500 300 L380 330 L290 300 L160 380 L0 360"/><path d="M430 210 L300 190 L220 90"/><path d="M700 268 L760 380 L900 430"/><path d="M380 330 L340 450 L250 520"/></svg></div>
+  <canvas id="embers"></canvas>
+  <svg width="0" height="0" style="position:absolute"><filter id="fire-distort"><feTurbulence type="fractalNoise" baseFrequency="0.012 0.04" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="60"/></filter></svg>
 
   <div id="loading">
     <div class="ld-inner">
-      <h1 class="logo">NEON<span>APEX</span></h1>
-      <svg class="ld-car" viewBox="0 0 200 80" aria-hidden="true">
-        <path d="M14 56 L24 40 L70 32 L96 18 L140 18 L168 34 L188 40 L192 56 Z" fill="none" stroke="#ff2d75" stroke-width="3" stroke-linejoin="round"/>
-        <path d="M78 32 L100 22 L136 22 L156 34 Z" fill="rgba(0,229,255,.25)" stroke="#00e5ff" stroke-width="2"/>
-        <g class="whl" style="transform-origin:52px 58px"><circle cx="52" cy="58" r="13" fill="#05080f" stroke="#7ff6ff" stroke-width="3"/><path d="M52 46 V70 M40 58 H64" stroke="#7ff6ff" stroke-width="2"/></g>
-        <g class="whl" style="transform-origin:154px 58px"><circle cx="154" cy="58" r="13" fill="#05080f" stroke="#7ff6ff" stroke-width="3"/><path d="M154 46 V70 M142 58 H166" stroke="#7ff6ff" stroke-width="2"/></g>
-        <path class="spd" d="M0 30 H40 M4 44 H30 M10 66 H34" stroke="#ff7a2d" stroke-width="2"/>
-      </svg>
+      <h1 class="logo">Helldrive</h1>
+      <svg class="ld-sigil" viewBox="0 0 100 100" aria-hidden="true"><g fill="none" stroke="#ff5a1a" stroke-width="2"><circle cx="50" cy="50" r="44"/><circle cx="50" cy="50" r="38" stroke-width="1"/><path d="M50 12 L72 80 L14 36 H86 L28 80 Z" stroke-linejoin="round"/></g></svg>
       <div class="ld-bar"><div id="ld-fill"></div></div>
       <div class="ld-row"><span id="ld-label">Loading</span><b id="ld-pct">0%</b></div>
       <p id="ld-tip"></p>
@@ -62,22 +59,22 @@
 
   <div id="scr-main" class="screen menu hidden">
     <div class="menu-col">
-      <h1 class="logo">NEON<span>APEX</span></h1>
-      <p class="tag">Arcade circuit racing · three circuits · four cars</p>
+      <h1 class="logo">Helldrive</h1>
+      <p class="tag">Race the damned · three hellscapes · four demon machines</p>
       <button id="m-play" class="primary big">PLAY</button>
       <button id="m-garage">GARAGE</button>
       <button id="m-options">OPTIONS</button>
-      <div class="menu-foot"><span id="m-car">Car: Stradale</span> · <span id="m-best">Best --</span></div>
+      <div class="menu-foot"><span id="m-car">Car: Hellhound</span> · <span id="m-best">Best --</span></div>
     </div>
   </div>
 
   <div id="scr-mode" class="screen menu hidden">
     <div class="menu-wide">
-      <h2>SELECT MODE</h2>
+      <h2>CHOOSE YOUR TORMENT</h2>
       <div class="cards" id="mode-cards">
-        <div class="mcard" data-mode="quick"><b>QUICK RACE</b><p>One race, your rules. Pick track, laps and rivals.</p><i>🏁</i></div>
-        <div class="mcard" data-mode="champ"><b>CHAMPIONSHIP</b><p>3 rounds across every circuit. Points 10-8-6-5-4-3-2-1. Podium decides the champion.</p><i>🏆</i></div>
-        <div class="mcard" data-mode="tt"><b>TIME TRIAL</b><p>Just you and the clock, chasing your own ghost.</p><i>⏱</i></div>
+        <div class="mcard" data-mode="quick"><b>DAMNED SPRINT</b><p>One race, your rules. Pick the hellscape, laps and rivals.</p><i>🔥</i></div>
+        <div class="mcard" data-mode="champ"><b>INFERNAL CROWN</b><p>3 rounds through every circle. Points 10-8-6-5-4-3-2-1. The throne decides who rules.</p><i>👑</i></div>
+        <div class="mcard" data-mode="tt"><b>SOUL TRIAL</b><p>Just you and the clock, hunted by your own ghost.</p><i>💀</i></div>
       </div>
       <button class="back" data-back>BACK</button>
     </div>
@@ -85,7 +82,7 @@
 
   <div id="scr-track" class="screen menu hidden">
     <div class="menu-wide">
-      <h2 id="track-title">SELECT TRACK</h2>
+      <h2 id="track-title">CHOOSE YOUR HELL</h2>
       <div class="cards" id="track-cards"></div>
       <div class="opts row3">
         <label id="lbl-laps">Laps <select id="opt-laps"><option>1</option><option>2</option><option>3</option><option>5</option></select></label>
@@ -98,8 +95,8 @@
 
   <div id="scr-garage" class="screen menu garage hidden">
     <div class="gpanel">
-      <h2>GARAGE</h2>
-      <div class="gname"><button id="g-prev" class="arrow">◀</button><div><b id="g-name">Stradale</b><p id="g-tag"></p></div><button id="g-next" class="arrow">▶</button></div>
+      <h2>THE FORGE</h2>
+      <div class="gname"><button id="g-prev" class="arrow">◀</button><div><b id="g-name">Hellhound</b><p id="g-tag"></p><p id="g-lore" class="lore"></p></div><button id="g-next" class="arrow">▶</button></div>
       <div id="g-stats"></div>
       <div class="lbl wide">PAINT</div>
       <div id="g-paint"></div>
@@ -122,7 +119,7 @@
         <label>Tilt steering <select id="o-tilt"><option value="0">Off</option><option value="1">On</option></select></label>
         <label>Show FPS <select id="o-fps"><option value="1">On</option><option value="0">Off</option></select></label>
       </div>
-      <p class="hint" id="o-note">Keyboard: W/↑ gas · S/↓ brake · A D steer · SPACE drift · SHIFT/N nitro · C camera · M mute · ESC pause · Gamepad supported</p>
+      <p class="hint" id="o-note">Keyboard: W/↑ gas · S/↓ brake · A D steer · SPACE drift · SHIFT/N Soul Burn · C camera · M mute · ESC pause · Gamepad supported</p>
       <div class="btnrow"><button class="back" data-back>BACK</button><button id="o-reset">RESET RECORDS</button></div>
     </div>
   </div>

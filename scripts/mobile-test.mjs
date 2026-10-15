@@ -31,7 +31,7 @@ await page.tap('#scr-options [data-back]'); await page.waitForTimeout(600);
 // garage on touch: switch car, then back
 await page.tap('#m-garage'); await page.waitForTimeout(1200);
 await page.tap('#g-next'); await page.waitForTimeout(400);
-if ((await page.textContent('#g-name')) !== 'GT Apex') fail('garage arrow tap failed');
+if ((await page.textContent('#g-name')) !== 'Baphomet GT') fail('garage arrow tap failed');
 await page.screenshot({ path: 'screenshots/mobile-garage.png', timeout: 300000 });
 await page.tap('#scr-garage [data-back]'); await page.waitForTimeout(600);
 // play -> quick race -> track select -> start

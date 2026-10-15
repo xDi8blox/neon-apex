@@ -17,17 +17,17 @@ const until = (fn, arg) => page.waitForFunction(fn, arg, T);
 await page.goto(`${URL}?quality=0`);
 await until(() => window.__game?.screen === 'main');
 log('main menu');
-// garage: pick the Storm Rally, paint it
+// garage: pick the Cerberus, paint it
 await page.click('#m-garage'); await page.waitForTimeout(800);
 await page.click('#g-next'); await page.click('#g-next');
-if ((await page.textContent('#g-name')) !== 'Storm Rally') fail('garage next did not cycle cars');
+if ((await page.textContent('#g-name')) !== 'Cerberus') fail('garage next did not cycle cars');
 await page.click('#g-paint i:nth-child(5)'); await page.click('#g-select'); await page.waitForTimeout(800);
 if ((await g(() => window.__game.screen)) !== 'main') fail('select did not return to main');
-if (!(await page.textContent('#m-car')).includes('Storm Rally')) fail('car selection not shown on main menu');
+if (!(await page.textContent('#m-car')).includes('Cerberus')) fail('car selection not shown on main menu');
 log('garage ok');
 // options: units -> mph
 await page.click('#m-options'); await page.selectOption('#o-units', 'mph'); await page.click('#scr-options [data-back]'); await page.waitForTimeout(500);
-// quick race on Neon Harbour via the menus, perfect start with the real keyboard
+// quick race on Bone Cathedral via the menus, perfect start with the real keyboard
 await page.click('#m-play'); await page.waitForTimeout(500); await page.click('[data-mode=quick]'); await page.waitForTimeout(500);
 await page.click('[data-track=harbour]'); await until(() => window.__game.track === 'harbour');
 await page.selectOption('#opt-laps', '1'); await page.selectOption('#opt-ai', '3');

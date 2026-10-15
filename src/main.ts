@@ -23,6 +23,7 @@ import { CARS, CarDef, carById, applyCar } from './cars';
 import { settings, saveSettings, bestKey, ghostKey, getBest } from './settings';
 import { Showroom } from './showroom';
 import { isPhone } from './touch';
+import { startEmbers } from './embers';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const LS_QUALITY = 'neonapex.quality';
@@ -168,7 +169,7 @@ function ensureWorld(id: string, onProgress?: (f: number) => void): Promise<void
     hud.setTrack(track);
     setupPost();
     audio.setRain(def.rain ? 1 : 0);
-    $('lb-title').textContent = `NEON APEX · ${def.name.toUpperCase()}`;
+    $('lb-title').textContent = `HELLDRIVE · ${def.name.toUpperCase()}`;
     document.documentElement.style.setProperty('--accent', def.accent);
     worldId = id;
   });
@@ -176,9 +177,9 @@ function ensureWorld(id: string, onProgress?: (f: number) => void): Promise<void
 }
 
 // ---------------- racers ----------------
-const COLORS = [0xff2d75, 0x1f8bff, 0xffc21a, 0x22d36a, 0xa24bff, 0xff7a1a, 0xe8e8e8, 0x16d9d0];
-const NAMES = ['YOU', 'Vega', 'Kaito', 'Rossi', 'Nadia', 'Bruno', 'Ines', 'Okafor'];
-const PAINTS = [0xd11a2a, 0xff2d75, 0xff7a1a, 0xffc21a, 0x22d36a, 0x16d9d0, 0x1f6bff, 0xa24bff, 0xf2f2f2, 0x15171c];
+const COLORS = [0xc3101a, 0x1b1b22, 0xb9a68a, 0x5a0f4a, 0xff4a10, 0x3a0a0a, 0xffb02e, 0x2e3a12];
+const NAMES = ['YOU', 'Vega', 'Malphas', 'Lilith', 'Azazel', 'Mordre', 'Belial', 'Morrigan'];
+const PAINTS = [0x8a0d0d, 0xc3101a, 0xff4a10, 0xffb02e, 0x1b1b22, 0xb9a68a, 0x5a0f4a, 0x3a0a0a, 0x2e3a12, 0xe9dcc4];
 interface Racer {
   name: string; car: CarDef; phys: CarPhysics; mesh: THREE.Group; wheels: THREE.Object3D[]; brakeMat: THREE.MeshStandardMaterial; flames: THREE.Mesh[];
   isPlayer: boolean; idx: number; crossings: number; half: boolean; lapStart: number; lastLap: number; bestLap: number;
@@ -273,7 +274,7 @@ async function startRace() {
   setupRace();
 }
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
-function wipe() { const w = $('wipe'); w.classList.remove('go'); void w.offsetWidth; w.classList.add('go'); audio.swish(); }
+function wipe() { for (const id of ['wipe', 'crack']) { const w = $(id); w.classList.remove('go'); void w.offsetWidth; w.classList.add('go'); } audio.swish(); }
 
 // ---------------- AI ----------------
 const tmpV = new THREE.Vector3(), tmpF = new THREE.Vector3();
@@ -338,7 +339,7 @@ function takedown(r: Racer) {
   if (r.wreckT > 0) return;
   r.wreckT = 2.2; r.hitT = 0; takedowns++;
   r.phys.yawRate += (Math.random() < 0.5 ? -1 : 1) * 3.5; r.phys.vf *= 0.55;
-  addScore(1000, 'TAKEDOWN!', 'big red');
+  addScore(1000, 'BANISHED!', 'big red');
   slowmo(1.1); shake = 1; audio.boom(1);
   emitSparks(r.phys.pos, r.phys.velocity(new THREE.Vector3()), 40);
 }
@@ -350,7 +351,7 @@ function onDriftTick(dt: number) {
     driftT += dt; driftGrace = 0.7;
     driftMult = Math.min(5, 1 + Math.floor(driftT / 1.4));
     driftPts += dt * p.speed * 8 * driftMult * (0.6 + slip * 2);
-    hud.combo(`DRIFT ×${driftMult}  ${Math.round(driftPts).toLocaleString('en-US')}`);
+    hud.combo(`EMBERS ×${driftMult}  ${Math.round(driftPts).toLocaleString('en-US')}`);
   } else if (driftPts > 0) {
     driftGrace -= dt;
     if (driftGrace <= 0) bankDrift();
@@ -360,10 +361,10 @@ function bankDrift() {
   const v = Math.round(driftPts); driftPts = 0; driftT = 0; driftMult = 1; hud.combo(null);
   if (v < 60) return;
   bestDrift = Math.max(bestDrift, v);
-  addScore(v, v > 2500 ? 'MEGA DRIFT' : v > 1000 ? 'GREAT DRIFT' : 'DRIFT', v > 1000 ? 'gold' : '');
+  addScore(v, v > 2500 ? 'INFERNAL DRIFT' : v > 1000 ? 'SCORCHING DRIFT' : 'EMBER DRIFT', v > 1000 ? 'gold' : '');
   if (v > 1000) audio.chime(880, 3);
 }
-function loseCombo() { if (driftPts > 200) hud.popup('COMBO LOST', 'red'); driftPts = 0; driftT = 0; driftMult = 1; hud.combo(null); }
+function loseCombo() { if (driftPts > 200) hud.popup('COMBO SNUFFED', 'red'); driftPts = 0; driftT = 0; driftMult = 1; hud.combo(null); }
 function nearMissTick(dt: number) {
   const p = player.phys;
   for (const r of racers) {
@@ -392,7 +393,7 @@ function fireShockwave() {
     const v = r.phys.velocity(new THREE.Vector3()).addScaledVector(dv.normalize(), 9 * (1 - d / 16));
     r.phys.setVelocity(v); r.phys.yawRate += (Math.random() - 0.5) * 2; r.hitT = 1.5; hit++;
   }
-  hud.popup(hit ? `SHOCKWAVE ×${hit}` : 'SHOCKWAVE', 'gold');
+  hud.popup(hit ? `HELLBLAST ×${hit}` : 'HELLBLAST', 'gold');
   if (hit) addScore(150 * hit, '');
 }
 
@@ -546,7 +547,7 @@ function finishGhostLap(lap: number) {
     const data: GhostData = { lap, x: rec.map(r => +r[0].toFixed(2)), z: rec.map(r => +r[1].toFixed(2)), h: rec.map(r => +r[2].toFixed(3)) };
     try { localStorage.setItem(ghostKey(trackDef.id, settings.car), JSON.stringify(data)); } catch { /* storage full */ }
     setGhost(data);
-    hud.popup('NEW GHOST', 'gold');
+    hud.popup('NEW WRAITH', 'gold');
   }
 }
 function updateGhost() {
@@ -669,7 +670,7 @@ function showResults() {
     $('res-table').innerHTML = `<tr><th>POS</th><th>DRIVER</th><th>CAR</th><th>TIME</th><th>BEST LAP</th>${champMode ? '<th>PTS</th>' : ''}</tr>${rows.join('')}`;
   }
   const place = sorted.indexOf(player) + 1;
-  $('res-title').textContent = mode === 'tt' ? 'TIME TRIAL' : place === 1 ? 'VICTORY!' : `FINISHED P${place}`;
+  $('res-title').textContent = mode === 'tt' ? 'SOUL TRIAL' : place === 1 ? 'YOU RULE HELL!' : `FINISHED P${place}`;
   const extras = [`Style ${score.toLocaleString('en-US')} pts`, takedowns && `${takedowns} takedown${takedowns > 1 ? 's' : ''}`, nearMisses && `${nearMisses} near miss${nearMisses > 1 ? 'es' : ''}`,
     bestDrift && `best drift ${bestDrift.toLocaleString('en-US')}`, perfectStart && 'perfect start'].filter(Boolean).join(' · ');
   $('res-note').innerHTML = `Best lap on ${trackDef.name}: <b>${isFinite(bestLap) ? fmt(bestLap) : '--'}</b><br>${extras}`;
@@ -827,7 +828,7 @@ function frame(ts?: number) {
       if (countdown <= 1) {
         state = 'race'; audio.beep(880, 0.5); hud.flash('GO!', 1);
         if (gasHeldSince > 0 && gasHeldSince <= 1.35) doPerfectStart();
-        else if (gasHeldSince > 1.35) { bogT = 1.1; hud.popup('JUMP START — BOGGED', 'red'); }
+        else if (gasHeldSince > 1.35) { bogT = 1.1; hud.popup('FALSE START — CURSED', 'red'); }
         else startWindow = 0.25;
       }
     } else if (state === 'race') {
@@ -882,7 +883,7 @@ function frame(ts?: number) {
 function fpsTick(dt: number) { fpsAcc += dt; fpsFrames++; if (fpsAcc > 0.5) { fps = fpsFrames / fpsAcc; fpsAcc = 0; fpsFrames = 0; } }
 function doPerfectStart() {
   perfectStart = true; perfectT = 1.3; player.phys.nitro = Math.min(1, player.phys.nitro + 0.25);
-  addScore(500, 'PERFECT START!', 'big gold'); audio.chime(784, 4); shake = 0.4;
+  addScore(500, 'UNHOLY START!', 'big gold'); audio.chime(784, 4); shake = 0.4;
 }
 function endIntro() {
   skipIntro = false; state = 'countdown'; hud.show(true); document.body.classList.remove('cinematic');
@@ -972,7 +973,7 @@ const thumbTracks = new Map<string, Track>();
 function buildTrackCards() {
   const box = $('track-cards'); box.innerHTML = '';
   const champMode = mode === 'champ';
-  $('track-title').textContent = champMode ? 'CHAMPIONSHIP · 3 ROUNDS' : mode === 'tt' ? 'TIME TRIAL · SELECT TRACK' : 'QUICK RACE · SELECT TRACK';
+  $('track-title').textContent = champMode ? 'INFERNAL CROWN · 3 CIRCLES' : mode === 'tt' ? 'SOUL TRIAL · CHOOSE YOUR HELL' : 'DAMNED SPRINT · CHOOSE YOUR HELL';
   $('lbl-ai').classList.toggle('hidden', mode !== 'quick');
   $('lbl-diff').classList.toggle('hidden', mode === 'tt');
   $('t-start').textContent = champMode ? 'START ROUND 1' : 'START';
@@ -1017,7 +1018,7 @@ function garageCar() {
   const c = CARS[gIdx];
   const col = settings.colors[c.id] ?? c.color;
   showroom!.setCar(c, col); showroom!.setAccent(new THREE.Color(trackDef.accent).getHex());
-  $('g-name').textContent = c.name; $('g-tag').textContent = c.tagline;
+  $('g-name').textContent = c.name; $('g-tag').textContent = c.tagline; $('g-lore').textContent = c.lore;
   $('g-stats').innerHTML = STAT_KEYS.map(k => `<div class="stat"><span>${k.toUpperCase()}</span><div class="sb"><i style="width:0"></i></div><b>${c.stats[k]}</b></div>`).join('');
   requestAnimationFrame(() => requestAnimationFrame(() => $('g-stats').querySelectorAll<HTMLElement>('i').forEach((el, i) => (el.style.width = `${c.stats[STAT_KEYS[i]] * 10}%`))));
   const paints = PAINTS.includes(c.color) ? PAINTS : [c.color, ...PAINTS.slice(0, -1)];
@@ -1027,7 +1028,7 @@ function garageCar() {
     $('g-paint').querySelectorAll('i').forEach(x => x.classList.remove('sel')); el.classList.add('sel'); audio.beep(1500, 0.03);
   }));
   $('g-best').innerHTML = TRACKS.map(t => { const b = getBest(t.id, c.id); return `${t.name}: ${isFinite(b) ? fmt(b) : '--'}`; }).join('<br>');
-  $('g-select').textContent = settings.car === c.id ? 'SELECTED ✓' : 'SELECT';
+  $('g-select').textContent = settings.car === c.id ? 'BOUND ✓' : 'BIND SOUL';
 }
 $('g-prev').onclick = () => { gIdx = (gIdx + CARS.length - 1) % CARS.length; garageCar(); audio.swish(); };
 $('g-next').onclick = () => { gIdx = (gIdx + 1) % CARS.length; garageCar(); audio.swish(); };
@@ -1068,7 +1069,7 @@ function showStandings() {
   hideResults();
   const last = champ.round >= TRACKS.length - 1;
   const rows = [...champ.points.entries()].sort((a, b) => b[1] - a[1]);
-  $('st-title').textContent = last ? (rows[0][0] === 'YOU' ? 'YOU ARE THE CHAMPION!' : `${rows[0][0].toUpperCase()} WINS THE TITLE`) : `STANDINGS · AFTER ROUND ${champ.round + 1}`;
+  $('st-title').textContent = last ? (rows[0][0] === 'YOU' ? 'YOU ARE THE CHAMPION! THE CROWN IS YOURS' : `${rows[0][0].toUpperCase()} WINS THE TITLE`) : `STANDINGS · AFTER ROUND ${champ.round + 1}`;
   $('st-rounds').innerHTML = TRACKS.map((t, i) => `<span class="${i <= champ.round ? 'done' : ''}">R${i + 1} ${t.name}</span>`).join('');
   $('st-table').innerHTML = `<tr><th>POS</th><th>DRIVER</th><th>CAR</th><th>PTS</th></tr>` + rows.map(([n, p], i) =>
     `<tr class="${n === 'YOU' ? 'me' : ''}"><td>${i + 1}</td><td>${n}</td><td>${carById(n === 'YOU' ? settings.car : champ.cars.get(n) ?? 'stradale').name}</td><td class="pts">${p}</td></tr>`).join('');
@@ -1105,17 +1106,18 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && sta
 
 // ---------------- loading screen ----------------
 const TIPS = [
-  'Press the gas in the last moment before GO for a PERFECT START boost.',
-  'Hold a slide to build a drift combo — up to ×5. Hitting a wall loses it.',
-  'Fire nitro with a well-filled tank to release a shockwave that shoves rivals aside.',
-  'Bump a rival into the wall for a TAKEDOWN.',
-  'Skim past rivals at speed for NEAR MISS points and a moment of slow motion.',
-  'Rain cuts grip: brake earlier at Highland Storm. The Storm Rally loves the wet.',
-  'Drifting refills nitro. The Neon Drifter refills it more than twice as fast.',
-  'Time Trial saves your best lap as a ghost you can race against.',
+  'Stomp the gas in the last heartbeat before GO for an UNHOLY START.',
+  'Hold a slide to stoke an ember combo, up to ×5. Kissing a wall snuffs it out.',
+  'Unleash Soul Burn with a full tank to release a HELLBLAST that hurls rivals aside.',
+  'Slam a rival into the spikes to BANISH them in fire.',
+  'Skim past the damned at speed for NEAR MISS points and a moment of dread slow-motion.',
+  'Falling ash cuts grip: brake earlier in the Ashen Storm. Cerberus digs in where others slide.',
+  'Drifting feeds your Soul Burn. The Succubus drinks it in more than twice as fast.',
+  'Soul Trial binds your best lap into a wraith you can race against.',
 ];
 let tipI = Math.floor(Math.random() * TIPS.length);
 const tipTimer = setInterval(() => { tipI = (tipI + 1) % TIPS.length; $('ld-tip').textContent = TIPS[tipI]; }, 3500);
+startEmbers(document.getElementById('embers') as HTMLCanvasElement, isPhone() ? 45 : 90);
 $('ld-tip').textContent = TIPS[tipI];
 function setLoad(f: number, label: string) { $('ld-fill').style.width = `${Math.round(f * 100)}%`; $('ld-pct').textContent = `${Math.round(f * 100)}%`; $('ld-label').textContent = label; }
 
@@ -1142,7 +1144,7 @@ function setLoad(f: number, label: string) { $('ld-fill').style.width = `${Math.
     if (kind === 'perfect') doPerfectStart();
     else if (kind === 'shock') { player.phys.nitro = 1; fireShockwave(); }
     else if (kind === 'takedown') { const r = racers.find(x => !x.isPlayer); if (r) takedown(r); }
-    else if (kind === 'drift') { driftPts = 1840; driftMult = 4; driftT = 5; driftGrace = 3; hud.combo('DRIFT ×4  1,840'); }
+    else if (kind === 'drift') { driftPts = 1840; driftMult = 4; driftT = 5; driftGrace = 3; hud.combo('EMBERS ×4  1,840'); }
     else if (kind === 'nearmiss') { nearMisses++; addScore(300, 'NEAR MISS'); slowmo(0.8); }
   },
   /** test-only: end the race now, keeping the current order */
