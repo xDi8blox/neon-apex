@@ -5,8 +5,12 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js';
+import { SSRPass } from 'three/examples/jsm/postprocessing/SSRPass.js';
+import { loadAssets, Assets } from './assets';
+import { buildCar, flameUniforms } from './carmodel';
 import { Track, ROAD_WIDTH, CURB_WIDTH, WALL_OFFSET } from './track';
-import { CarPhysics, CarInput, buildCarMesh } from './car';
+import { CarPhysics, CarInput } from './car';
 import { buildEnvironment } from './scenery';
 import { SkidMarks, Smoke } from './effects';
 import { AudioEngine } from './audio';
@@ -14,7 +18,7 @@ import { Input } from './input';
 import { Hud, fmt } from './hud';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
-const LS_BEST = 'neonapex.bestLap', LS_QUALITY = 'neonapex.quality';
+const LS_BEST = 'neonapex.bestLap', LS_QUALITY = 'neonapex.quality', LS_WET = 'neonapex.wet';
 const params = new URLSearchParams(location.search);
 
 // ---------------- settings ----------------
@@ -22,6 +26,8 @@ const defaultQuality = /Mobi|Android/i.test(navigator.userAgent) ? 0 : 1;
 let quality = Number(params.get('quality') ?? localStorage.getItem(LS_QUALITY) ?? defaultQuality);
 if (!(quality >= 0 && quality <= 2)) quality = 1;
 ($('opt-quality') as HTMLSelectElement).value = String(quality);
+const wet = (params.get('wet') ?? localStorage.getItem(LS_WET) ?? '0') === '1';
+($('opt-wet') as HTMLSelectElement).value = wet ? '1' : '0';
 
 // ---------------- renderer / scene ----------------
 const renderer = new THREE.WebGLRenderer({ antialias: quality > 0, powerPreference: 'high-performance' });
@@ -34,38 +40,66 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 $('app').appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 5000);
+const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.25, 5000);
 const track = new Track();
-track.build(scene, quality);
-const { dirLight } = buildEnvironment(scene, renderer, track, quality);
-const sunOffset = dirLight.position.clone().normalize().multiplyScalar(300);
-const skids = new SkidMarks(scene, [600, 1500, 3000][quality]);
-const smoke = new Smoke(scene, [150, 400, 700][quality]);
 const audio = new AudioEngine();
 const input = new Input();
 const hud = new Hud(track);
+let assets!: Assets;
+let dirLight!: THREE.DirectionalLight;
+let sunOffset = new THREE.Vector3();
+let skids!: SkidMarks;
+let smoke!: Smoke;
 
 // ---------------- post-processing ----------------
+// Speed FX: radial motion blur scaled by speed, nitro speed lines + chromatic fringe, vignette.
 const SpeedShader = {
-  uniforms: { tDiffuse: { value: null }, uAmount: { value: 0 }, uVignette: { value: 0.35 } },
+  uniforms: { tDiffuse: { value: null }, uAmount: { value: 0 }, uNitro: { value: 0 }, uTime: { value: 0 }, uVignette: { value: 0.38 } },
   vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
-  fragmentShader: `uniform sampler2D tDiffuse; uniform float uAmount; uniform float uVignette; varying vec2 vUv;
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float uAmount; uniform float uNitro; uniform float uTime; uniform float uVignette; varying vec2 vUv;
+    float h(float n){ return fract(sin(n)*43758.5453); }
     void main(){
       vec2 d = vUv - 0.5; float r = length(d);
-      vec4 c = vec4(0.0); float w = 0.0;
-      for (int i = 0; i < 8; i++) { float s = 1.0 - uAmount * smoothstep(0.15, 0.7, r) * float(i) * 0.012; c += texture2D(tDiffuse, 0.5 + d * s); w += 1.0; }
-      c /= w;
-      c.rgb *= 1.0 - uVignette * smoothstep(0.35, 0.85, r);
-      gl_FragColor = c;
+      float blur = (uAmount + uNitro*0.8) * smoothstep(0.12, 0.7, r);
+      vec3 c = vec3(0.0);
+      for (int i = 0; i < 10; i++) { float s = 1.0 - blur * float(i) * 0.011; c += texture2D(tDiffuse, 0.5 + d * s).rgb; }
+      c /= 10.0;
+      // chromatic fringe while boosting
+      if (uNitro > 0.01) {
+        float ca = uNitro * 0.006 * r;
+        c.r = mix(c.r, texture2D(tDiffuse, vUv + d * ca).r, 0.6);
+        c.b = mix(c.b, texture2D(tDiffuse, vUv - d * ca).b, 0.6);
+        // radial speed lines
+        float ang = atan(d.y, d.x);
+        float seg = floor(ang * 60.0);
+        float line = step(0.82, h(seg + floor(uTime * 18.0) * 7.0));
+        float mask = smoothstep(0.28, 0.75, r) * line * uNitro;
+        c += vec3(0.65, 0.85, 1.0) * mask * 0.55;
+      }
+      c *= 1.0 - uVignette * smoothstep(0.35, 0.85, r);
+      gl_FragColor = vec4(c, 1.0);
     }`,
 };
 let composer: EffectComposer | null = null;
 let speedPass: ShaderPass | null = null;
-if (quality > 0) {
-  composer = new EffectComposer(renderer);
-  composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), quality > 1 ? 0.45 : 0.35, 0.4, 1.6);
-  composer.addPass(bloom);
+function setupPost() {
+  if (quality === 0) return;
+  const rt = new THREE.WebGLRenderTarget(window.innerWidth * renderer.getPixelRatio(), window.innerHeight * renderer.getPixelRatio(),
+    { type: THREE.HalfFloatType, samples: quality > 1 ? 4 : 2 });
+  composer = new EffectComposer(renderer, rt);
+  if (wet && quality > 1 && track.roadMesh) {
+    // screen-space reflections on the wet road surface only
+    const ssr = new SSRPass({ renderer, scene, camera, width: window.innerWidth, height: window.innerHeight, selects: [track.roadMesh], groundReflector: null });
+    ssr.thickness = 0.02; ssr.maxDistance = 60; ssr.opacity = 0.55; ssr.infiniteThick = false;
+    composer.addPass(ssr);
+  } else composer.addPass(new RenderPass(scene, camera));
+  if (quality > 1 && params.get('gtao') !== '0') {
+    const gtao = new GTAOPass(scene, camera, window.innerWidth, window.innerHeight);
+    gtao.blendIntensity = 0.85;
+    gtao.updateGtaoMaterial({ radius: 0.6, distanceExponent: 1.5, thickness: 1.5, scale: 1, samples: 12 });
+    composer.addPass(gtao);
+  }
+  composer.addPass(new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), quality > 1 ? 0.5 : 0.4, 0.45, 1.4));
   speedPass = new ShaderPass(SpeedShader);
   composer.addPass(speedPass);
   composer.addPass(new OutputPass());
@@ -75,7 +109,7 @@ if (quality > 0) {
 const COLORS = [0xff2d75, 0x1f8bff, 0xffc21a, 0x22d36a, 0xa24bff, 0xff7a1a, 0xe8e8e8, 0x16d9d0];
 const NAMES = ['YOU', 'Vega', 'Kaito', 'Rossi', 'Nadia', 'Bruno', 'Ines', 'Okafor'];
 interface Racer {
-  name: string; phys: CarPhysics; mesh: THREE.Group; wheels: THREE.Object3D[]; brakeMat: THREE.MeshStandardMaterial;
+  name: string; phys: CarPhysics; mesh: THREE.Group; wheels: THREE.Object3D[]; brakeMat: THREE.MeshStandardMaterial; flames: THREE.Mesh[];
   isPlayer: boolean; idx: number; crossings: number; half: boolean; lapStart: number; lastLap: number; bestLap: number;
   finished: boolean; finishTime: number; skill: number; lineBias: number; input: CarInput; wheelRot: number; place: number;
 }
@@ -83,22 +117,25 @@ let racers: Racer[] = [];
 let player!: Racer;
 
 function makeRacer(i: number, isPlayer: boolean, skill: number): Racer {
-  const { group, wheels, brakeMat } = buildCarMesh(COLORS[i % COLORS.length], quality);
+  const detailed = quality > 0 && isPlayer;
+  const { group, wheels, brakeMat, flames } = buildCar(assets, COLORS[i % COLORS.length], quality, detailed);
   scene.add(group);
   const phys = new CarPhysics();
   phys.power = isPlayer ? 1 : skill;
   phys.stability = isPlayer ? 0.6 : 1;
-  return { name: NAMES[i], phys, mesh: group, wheels, brakeMat, isPlayer, idx: 0, crossings: 0, half: false, lapStart: 0, lastLap: 0,
+  return { name: NAMES[i], phys, mesh: group, wheels, brakeMat, flames, isPlayer, idx: 0, crossings: 0, half: false, lapStart: 0, lastLap: 0,
     bestLap: Infinity, finished: false, finishTime: 0, skill, lineBias: (Math.random() - 0.5) * 2, input: { throttle: 0, brake: 0, steer: 0, handbrake: false }, wheelRot: 0, place: 1 };
 }
 
 // ---------------- game state ----------------
-type State = 'menu' | 'countdown' | 'race' | 'paused' | 'results';
+type State = 'menu' | 'intro' | 'countdown' | 'race' | 'paused' | 'results';
 let state: State = 'menu';
 let raceTime = 0, countdown = 0, totalLaps = 3, lastBeep = -1;
 let camMode = 0; const CAM_NAMES = ['CHASE', 'BUMPER', 'TV', 'ORBIT'];
 let autopilot = params.has('autopilot');
+let forceNitro = false;
 let shake = 0;
+let introT = 0; const INTRO_LEN = 5.5;
 let bestLap = Number(localStorage.getItem(LS_BEST) ?? Infinity) || Infinity;
 $('menu-best').textContent = isFinite(bestLap) ? fmt(bestLap) : '--';
 $('btn-mute').textContent = audio.muted ? 'SOUND: OFF' : 'SOUND: ON';
@@ -126,8 +163,8 @@ function setupRace() {
     if (isPlayer) player = r;
   }
   raceTime = 0; countdown = 4.0; lastBeep = -1;
-  state = 'countdown';
-  hud.show(true);
+  state = 'intro'; introT = 0;
+  hud.show(false); document.body.classList.add('cinematic');
   syncMeshes(0);
 }
 
@@ -174,6 +211,8 @@ function aiControl(r: Racer): CarInput {
     throttle: THREE.MathUtils.clamp(err * 0.35 + 0.3, 0, 1),
     brake: err < -2 ? THREE.MathUtils.clamp(-err * 0.15, 0, 1) : 0,
     handbrake: false,
+    // AI fires nitro on straights when the road ahead allows much more speed
+    nitro: state === 'race' && p.nitro > 0.25 && target > speed + 12 && Math.abs(ang) < 0.06 && (r.lineBias > -0.3 || p.boosting),
   };
 }
 
@@ -190,11 +229,11 @@ function simulate(dt: number) {
   const N = track.N;
   for (const r of racers) {
     const racing = state === 'race' && !r.finished;
-    if (state === 'countdown') r.input = { throttle: 0, brake: 0, steer: 0, handbrake: true };
+    if (state === 'countdown' || state === 'intro') r.input = { throttle: 0, brake: 0, steer: 0, handbrake: true };
     else if (r.finished || (r.isPlayer && !autopilot)) {
       if (r.isPlayer && !r.finished) r.input = input.controls();
       else { const ai = aiControl(r); r.input = { ...ai, throttle: ai.throttle * 0.5 }; }
-    } else r.input = aiControl(r);
+    } else { r.input = aiControl(r); if (r.isPlayer) r.input.nitro = forceNitro; }
     void racing;
     r.phys.step(r.input, dt);
 
@@ -299,9 +338,10 @@ function syncMeshes(dt: number) {
     r.wheelRot += p.vf * dt / 0.36;
     r.wheels.forEach((w, i) => {
       if (i < 2) w.rotation.y = -p.steerAngle;
-      w.children[0].rotation.x = -r.wheelRot;
+      w.rotation.x = -r.wheelRot;
     });
-    r.brakeMat.emissiveIntensity = r.input.brake > 0.1 ? 5 : 1.2;
+    r.brakeMat.emissiveIntensity = r.input.brake > 0.1 ? 7 : 1.4;
+    for (const f of r.flames) { f.visible = p.boosting; if (p.boosting) f.scale.set(1, 1, 0.8 + Math.random() * 0.6); }
 
     // tire smoke + skid marks for rear wheels
     const sliding = (p.slipRear > 0.14 || (r.input.handbrake && p.speed > 6) || (p.wheelspin > 0.85 && p.speed < 18 && r.input.throttle > 0.5)) && p.speed > 3 && !p.offroad;
@@ -323,12 +363,22 @@ function updateCamera(dt: number) {
   const speed = p.speed;
   const target = new THREE.Vector3(p.pos.x, 0, p.pos.z);
   let fov = 60;
-  if (camMode === 0) { // chase: lagging spring camera aligned to velocity direction for drift feel
+  if (state === 'intro') { // cinematic flyby: low sweep along the grid, rising crane, then settle behind the player
+    const t = Math.min(introT / INTRO_LEN, 1), e = t * t * (3 - 2 * t);
+    const lead = racers[0].phys.pos;
+    const a = new THREE.Vector3().copy(lead).addScaledVector(f, 25).add(new THREE.Vector3(0, 1.2, 0)).addScaledVector(p.right(new THREE.Vector3()), 6);
+    const b = new THREE.Vector3().copy(target).addScaledVector(p.right(new THREE.Vector3()), -14).setY(16);
+    const c = new THREE.Vector3().copy(target).addScaledVector(f, -6.0).setY(1.9);
+    const k1 = a.clone().lerp(b, e), k2 = b.clone().lerp(c, e);
+    camPos.copy(k1.lerp(k2, e));
+    camLook.copy(lead).lerp(target, Math.min(1, e * 1.4)).setY(1);
+    fov = 45 + 15 * e;
+  } else if (camMode === 0) { // chase: lagging spring camera aligned to velocity direction for drift feel
     const vel = p.velocity(new THREE.Vector3());
     const dir = speed > 4 ? f.clone().lerp(vel.normalize(), 0.35).normalize() : f;
-    const want = target.clone().addScaledVector(dir, -7.2 - speed * 0.02).setY(2.6 + speed * 0.008);
+    const want = target.clone().addScaledVector(dir, -6.0 - speed * 0.015).setY(1.9 + speed * 0.006);
     camPos.lerp(want, 1 - Math.exp(-dt * 7));
-    camLook.lerp(target.clone().addScaledVector(f, 4).setY(1.0), 1 - Math.exp(-dt * 12));
+    camLook.lerp(target.clone().addScaledVector(f, 5).setY(0.9), 1 - Math.exp(-dt * 12));
     fov = 60 + Math.min(speed, 80) * 0.28;
   } else if (camMode === 1) { // bumper
     camPos.copy(target).addScaledVector(f, 2.45).setY(0.75);
@@ -353,9 +403,15 @@ function updateCamera(dt: number) {
   // subtle high-speed vibration
   if (camMode < 2 && speed > 45) camera.position.y += (Math.random() - 0.5) * (speed - 45) * 0.0015;
   camera.lookAt(camLook);
+  if (p.boosting && state !== 'intro') fov += 10;
   camera.fov += (fov - camera.fov) * Math.min(1, dt * 4);
   camera.updateProjectionMatrix();
-  if (speedPass) speedPass.uniforms.uAmount.value = camMode < 2 ? THREE.MathUtils.clamp((speed - 30) / 45, 0, 1) * (quality > 1 ? 1.4 : 1) : 0;
+  if (speedPass) {
+    const u = speedPass.uniforms;
+    u.uAmount.value = camMode < 2 && state !== 'intro' ? THREE.MathUtils.clamp((speed - 30) / 45, 0, 1) * (quality > 1 ? 1.4 : 1) : 0;
+    u.uNitro.value += ((p.boosting && camMode < 2 ? 1 : 0) - u.uNitro.value) * Math.min(1, dt * 6);
+    u.uTime.value += dt;
+  }
   // keep the shadow frustum around the player
   dirLight.position.copy(target).add(sunOffset); dirLight.target.position.copy(target);
 }
@@ -370,10 +426,16 @@ function frame(ts?: number) {
   input.pollPad();
   handleGlobalKeys();
 
+  flameUniforms.uTime.value += dt;
+  if (state === 'intro') {
+    introT += dt;
+    acc += dt; while (acc >= STEP) { simulate(STEP); acc -= STEP; }
+    if (introT >= INTRO_LEN || input.hit('Enter') || input.hit('Space') || skipIntro) endIntro();
+  }
   if (state === 'countdown' || state === 'race') {
     acc += dt;
     let n = 0;
-    while (acc >= STEP && n++ < 10) { simulate(STEP); acc -= STEP; if (state === 'race') raceTime += STEP; }
+    while (acc >= STEP && n++ < 12) { simulate(STEP); acc -= STEP; if (state === 'race') raceTime += STEP; }
     if (state === 'countdown') {
       countdown -= dt;
       const sec = Math.ceil(countdown - 1);
@@ -395,23 +457,29 @@ function frame(ts?: number) {
   const order = [...racers].sort((a, b) => (a.finished && b.finished) ? a.finishTime - b.finishTime : (a.finished ? -1 : b.finished ? 1 : progress(b) - progress(a)));
   order.forEach((r, i) => (r.place = i + 1));
 
-  const active = state === 'race' || state === 'countdown';
+  const active = state === 'race' || state === 'countdown' || state === 'intro';
   if (player) {
     const skid = player.phys.speed > 5 ? Math.max(0, player.phys.slipRear - 0.12) * 4 + (player.input.handbrake ? 0.5 : 0) : 0;
-    audio.update(player.phys.rpm, player.input.throttle, skid, active || state === 'results');
+    audio.update(player.phys.rpm, player.input.throttle, skid, active || state === 'results', player.phys.boosting);
   }
-  if (active || state === 'results') hud.update(dt, player, racers, totalLaps, raceTime, bestLap, fps);
+  if (state !== 'intro' && (active || state === 'results')) hud.update(dt, player, racers, totalLaps, raceTime, bestLap, fps);
 
   if (composer) composer.render(); else renderer.render(scene, camera);
   fpsAcc += dt; fpsFrames++; if (fpsAcc > 0.5) { fps = fpsFrames / fpsAcc; fpsAcc = 0; fpsFrames = 0; }
   input.endFrame();
 }
 
+let skipIntro = false;
+function endIntro() {
+  skipIntro = false; state = 'countdown'; hud.show(true); document.body.classList.remove('cinematic');
+  camPos.copy(player.phys.pos).addScaledVector(player.phys.forward(), -6.0).setY(1.9);
+}
 function handleGlobalKeys() {
   if (input.hit('KeyC') && (state === 'race' || state === 'countdown')) { camMode = (camMode + 1) % CAM_NAMES.length; $('h-cam').textContent = 'CAM: ' + CAM_NAMES[camMode]; }
   if (input.hit('KeyM')) toggleMute();
   if (input.hit('Escape') || input.hit('KeyP')) {
     if (state === 'race' || state === 'countdown') pause(true);
+    else if (state === 'intro') endIntro();
     else if (state === 'paused') pause(false);
   }
 }
@@ -435,8 +503,12 @@ function attract() {
 let autopilotMenu = false; void autopilotMenu;
 
 $('btn-start').onclick = () => {
-  const q = ($('opt-quality') as HTMLSelectElement).value;
-  if (Number(q) !== quality) { localStorage.setItem(LS_QUALITY, q); const u = new URL(location.href); u.searchParams.delete('quality'); u.searchParams.set('autostart', '1'); location.href = u.toString(); return; }
+  const q = ($('opt-quality') as HTMLSelectElement).value, w = ($('opt-wet') as HTMLSelectElement).value === '1';
+  if (Number(q) !== quality || w !== wet) {
+    // renderer-level settings (MSAA, shadow maps, passes, materials) need a fresh context
+    localStorage.setItem(LS_QUALITY, q); localStorage.setItem(LS_WET, w ? '1' : '0');
+    const u = new URL(location.href); u.searchParams.delete('quality'); u.searchParams.delete('wet'); u.searchParams.set('autostart', '1'); location.href = u.toString(); return;
+  }
   camMode = 0; $('h-cam').textContent = 'CAM: CHASE';
   startRace();
 };
@@ -457,12 +529,27 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && sta
 (window as unknown as Record<string, unknown>).__game = {
   start: () => $('btn-start').click(),
   setAutopilot: (v: boolean) => { autopilot = v; },
+  skipIntro: () => { skipIntro = true; },
+  teleport: (i: number) => { const s = track.samples[i]; player.phys.pos.copy(s.p); player.phys.heading = Math.atan2(s.t.x, -s.t.z); player.idx = i; },
+  setNitro: (v: boolean) => { forceNitro = v; },
   setCamera: (m: number) => { camMode = m; $('h-cam').textContent = 'CAM: ' + CAM_NAMES[m]; },
   get state() { return state; },
   get fps() { return fps; },
   get player() { return player && { speed: player.phys.speed, lap: player.crossings, place: player.place, idx: player.idx }; },
 };
 
-attract();
-if (params.has('autostart')) { $('btn-start').click(); }
-frame();
+const startBtn = $('btn-start') as HTMLButtonElement;
+startBtn.disabled = true;
+loadAssets(renderer, quality, f => { startBtn.textContent = `LOADING ${Math.round(f * 100)}%`; }).then(a => {
+  assets = a;
+  track.build(scene, quality, assets, wet);
+  const env = buildEnvironment(scene, renderer, track, quality, assets);
+  dirLight = env.dirLight; sunOffset = env.sunDir.clone().multiplyScalar(300);
+  skids = new SkidMarks(scene, [600, 1500, 3000][quality]);
+  smoke = new Smoke(scene, [150, 400, 700][quality]);
+  setupPost();
+  startBtn.disabled = false; startBtn.textContent = 'START RACE';
+  attract();
+  if (params.has('autostart')) startBtn.click();
+  frame();
+}).catch(err => { console.error(err); startBtn.textContent = 'FAILED TO LOAD ASSETS'; });

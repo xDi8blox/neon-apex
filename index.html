@@ -20,10 +20,12 @@
     <canvas id="minimap" width="220" height="220"></canvas>
     <canvas id="speedo" width="260" height="260"></canvas>
     <div id="h-cam" class="panel small">CAM: CHASE</div>
+    <div id="nitro"><span>NITRO</span><div class="bar"><div id="nitro-fill"></div></div></div>
     <div id="h-msg"></div>
     <div id="lights"><i></i><i></i><i></i><i></i><i></i></div>
   </div>
 
+  <div id="letterbox"><div class="top"></div><div class="bot"><span>NEON APEX · VENICE SUNSET CIRCUIT</span><em>ENTER to skip</em></div></div>
   <div id="menu" class="screen">
     <div class="card">
       <h1>NEON<span>APEX</span></h1>
@@ -32,11 +34,12 @@
         <label>Laps <select id="opt-laps"><option>1</option><option>2</option><option selected>3</option><option>5</option></select></label>
         <label>Opponents <select id="opt-ai"><option>0</option><option>3</option><option selected>5</option><option>7</option></select></label>
         <label>Difficulty <select id="opt-diff"><option value="0.88">Easy</option><option value="0.95" selected>Medium</option><option value="1.0">Hard</option></select></label>
+        <label>Road <select id="opt-wet"><option value="0">Dry</option><option value="1">Wet</option></select></label>
         <label>Graphics <select id="opt-quality"><option value="0">Low</option><option value="1">Medium</option><option value="2">High</option></select></label>
       </div>
       <button id="btn-start" class="primary">START RACE</button>
       <div class="best">Best lap: <b id="menu-best">--</b></div>
-      <div class="help">W/↑ throttle · S/↓ brake/reverse · A D/← → steer · SPACE handbrake · C camera · M mute · ESC pause · Gamepad supported</div>
+      <div class="help">W/↑ throttle · S/↓ brake/reverse · A D/← → steer · SPACE handbrake · SHIFT/N nitro · C camera · M mute · ESC pause · Gamepad supported</div>
     </div>
   </div>
 

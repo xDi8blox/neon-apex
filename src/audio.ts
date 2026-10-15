@@ -7,6 +7,8 @@ export class AudioEngine {
   private engFilter!: BiquadFilterNode;
   private skidGain!: GainNode;
   private skidFilter!: BiquadFilterNode;
+  private boostGain!: GainNode;
+  private wasBoosting = false;
   muted = localStorage.getItem('neonapex.muted') === '1';
 
   init() {
@@ -31,6 +33,11 @@ export class AudioEngine {
     this.skidFilter = ctx.createBiquadFilter(); this.skidFilter.type = 'bandpass'; this.skidFilter.frequency.value = 1800; this.skidFilter.Q.value = 3;
     this.skidGain = ctx.createGain(); this.skidGain.gain.value = 0;
     noise.connect(this.skidFilter); this.skidFilter.connect(this.skidGain); this.skidGain.connect(this.master); noise.start();
+    // nitro: low rumbling roar (lowpassed noise)
+    const roar = ctx.createBufferSource(); roar.buffer = this.noiseBuffer(2); roar.loop = true;
+    const rf = ctx.createBiquadFilter(); rf.type = 'lowpass'; rf.frequency.value = 420;
+    this.boostGain = ctx.createGain(); this.boostGain.gain.value = 0;
+    roar.connect(rf); rf.connect(this.boostGain); this.boostGain.connect(this.master); roar.start();
   }
   private noiseBuffer(sec: number) {
     const ctx = this.ctx!, b = ctx.createBuffer(1, ctx.sampleRate * sec, ctx.sampleRate), d = b.getChannelData(0);
@@ -41,7 +48,7 @@ export class AudioEngine {
     this.muted = m; localStorage.setItem('neonapex.muted', m ? '1' : '0');
     if (this.ctx) this.master.gain.setTargetAtTime(m ? 0 : 0.5, this.ctx.currentTime, 0.05);
   }
-  update(rpm: number, throttle: number, skid: number, active: boolean) {
+  update(rpm: number, throttle: number, skid: number, active: boolean, boosting = false) {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
     const f = 28 + rpm / 60 * 1.0; // firing frequency (4-cyl-ish: rpm/60*2 /2)
@@ -51,6 +58,17 @@ export class AudioEngine {
     this.engFilter.frequency.setTargetAtTime(300 + rpm * 0.25 + throttle * 1400, t, 0.05);
     this.engGain.gain.setTargetAtTime(active ? 0.22 + throttle * 0.25 : 0, t, 0.08);
     this.skidGain.gain.setTargetAtTime(active ? Math.min(skid, 1) * 0.25 : 0, t, 0.05);
+    this.boostGain.gain.setTargetAtTime(active && boosting ? 0.55 : 0, t, boosting ? 0.04 : 0.25);
+    if (boosting && !this.wasBoosting) this.whoosh();
+    this.wasBoosting = boosting;
+  }
+  private whoosh() {
+    if (!this.ctx) return;
+    const src = this.ctx.createBufferSource(); src.buffer = this.noiseBuffer(0.8);
+    const f = this.ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.2;
+    f.frequency.setValueAtTime(300, this.ctx.currentTime); f.frequency.exponentialRampToValueAtTime(3000, this.ctx.currentTime + 0.6);
+    const g = this.ctx.createGain(); g.gain.value = 0.5; g.gain.setTargetAtTime(0, this.ctx.currentTime + 0.3, 0.15);
+    src.connect(f); f.connect(g); g.connect(this.master); src.start();
   }
   beep(freq: number, dur = 0.18) {
     if (!this.ctx) return;

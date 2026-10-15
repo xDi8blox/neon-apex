@@ -39,3 +39,16 @@ td, th { padding: 7px 10px; text-align: left; border-bottom: 1px solid rgba(255,
 th { color: #7ff6ff; font-size: 12px; letter-spacing: 2px; }
 tr.me { background: rgba(255,45,117,.18); font-weight: 700; }
 #res-note { margin-bottom: 12px; color: #ffd27a; min-height: 20px; }
+
+#nitro { position: absolute; right: 270px; bottom: 34px; width: 230px; font-size: 12px; letter-spacing: 3px; font-weight: 800; font-style: italic; color: #7ff6ff; }
+#nitro .bar { margin-top: 5px; height: 12px; background: rgba(0,0,0,.55); border: 1px solid rgba(127,246,255,.4); border-radius: 6px; overflow: hidden; transform: skewX(-20deg); }
+#nitro-fill { height: 100%; width: 60%; background: linear-gradient(90deg, #1f8bff, #7ff6ff); box-shadow: 0 0 12px #00e5ff; transition: width .1s; }
+#nitro.ready span { color: #fff; text-shadow: 0 0 10px #00e5ff; }
+#nitro.active #nitro-fill { background: linear-gradient(90deg, #ff7a2d, #ffe07a); box-shadow: 0 0 18px #ff7a2d; }
+#letterbox { position: fixed; inset: 0; pointer-events: none; z-index: 6; }
+#letterbox .top, #letterbox .bot { position: absolute; left: 0; right: 0; height: 0; background: #000; transition: height .6s ease; overflow: hidden; }
+#letterbox .top { top: 0; } #letterbox .bot { bottom: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; }
+#letterbox span { font-weight: 800; letter-spacing: 6px; font-style: italic; color: #fff; text-shadow: 0 0 16px #ff2d75; }
+#letterbox em { font-size: 12px; letter-spacing: 2px; opacity: .6; color: #fff; }
+body.cinematic #letterbox .top, body.cinematic #letterbox .bot { height: 11vh; }
+button:disabled { opacity: .6; cursor: wait; }

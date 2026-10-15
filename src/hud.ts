@@ -6,7 +6,7 @@ export function fmt(t: number) {
   return `${m}:${s.toFixed(3).padStart(6, '0')}`;
 }
 
-interface HudRacer { phys: { pos: THREE.Vector3; speed: number; rpm: number; gear: number; vf: number; heading: number }; isPlayer: boolean; crossings: number; place: number; lapStart: number; lastLap: number; bestLap: number; finished: boolean; }
+interface HudRacer { phys: { pos: THREE.Vector3; speed: number; rpm: number; gear: number; vf: number; heading: number; nitro: number; boosting: boolean }; isPlayer: boolean; crossings: number; place: number; lapStart: number; lastLap: number; bestLap: number; finished: boolean; }
 
 export class Hud {
   private el = (id: string) => document.getElementById(id)!;
@@ -49,6 +49,10 @@ export class Hud {
     if (this.msgT > 0) { this.msgT -= dt; if (this.msgT <= 0) this.el('h-msg').textContent = ''; }
     if (time > 2) this.el('lights').classList.remove('on');
     this.drawSpeedo(player, fps);
+    const bar = this.el('nitro-fill') as HTMLElement;
+    bar.style.width = `${Math.round(player.phys.nitro * 100)}%`;
+    this.el('nitro').classList.toggle('active', player.phys.boosting);
+    this.el('nitro').classList.toggle('ready', player.phys.nitro > 0.3);
     this.drawMap(player, racers);
   }
   private drawSpeedo(p: HudRacer, fps: number) {

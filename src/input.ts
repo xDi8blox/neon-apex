@@ -38,6 +38,7 @@ export class Input {
     let brake = (k.has('KeyS') || k.has('ArrowDown')) ? 1 : 0;
     let steer = ((k.has('KeyD') || k.has('ArrowRight')) ? 1 : 0) - ((k.has('KeyA') || k.has('ArrowLeft')) ? 1 : 0);
     let handbrake = k.has('Space');
+    let nitro = k.has('ShiftLeft') || k.has('ShiftRight') || k.has('KeyN');
     const p = this.pad();
     if (p) {
       const ax = p.axes[0] ?? 0;
@@ -46,7 +47,8 @@ export class Input {
       if (rt > 0.05) throttle = Math.max(throttle, rt);
       if (lt > 0.05) brake = Math.max(brake, lt);
       if (p.buttons[0]?.pressed || p.buttons[1]?.pressed) handbrake = true;
+      if (p.buttons[2]?.pressed || p.buttons[5]?.pressed) nitro = true;
     }
-    return { throttle, brake, steer, handbrake };
+    return { throttle, brake, steer, handbrake, nitro };
   }
 }
