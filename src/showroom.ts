@@ -19,7 +19,7 @@ export class Showroom {
   constructor(renderer: THREE.WebGLRenderer, private assets: Assets, private quality: number) {
     const pmrem = new THREE.PMREMGenerator(renderer);
     this.scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture; pmrem.dispose();
-    this.scene.environmentIntensity = 0.7;
+    this.scene.environmentIntensity = 0.35;
     this.scene.background = new THREE.Color(0x0a0302);
     this.scene.fog = new THREE.Fog(0x0a0302, 14, 40);
     const floor = new THREE.Mesh(new THREE.CircleGeometry(30, 64).rotateX(-Math.PI / 2),

@@ -49,7 +49,7 @@ function skyMaterial(def: TrackDef, oct: number, env = false) {
         float c = fbm(cp) * 0.7 + fbm(cp * 3.1 - uTime * 0.02) * 0.3;
         float cov = smoothstep(0.45 - uClouds * 0.25, 0.85, c) * smoothstep(-0.05, 0.12, y);
         vec3 cloud = mix(uHor * 0.7, uMid * 0.8 + uTop * 0.3, smoothstep(0.0, 0.4, y)) * (0.45 + 0.6 * c);
-        col = mix(col, cloud, cov * 0.85);
+        col = mix(col, cloud * (1.0 - 0.55 * uStars), cov * 0.85);
         if (uStars > 0.0) { vec2 sp = d.xz / (abs(y) + 0.3) * 160.0; float s = step(0.996, hh(floor(sp))) * smoothstep(0.1, 0.4, y) * (1.0 - cov); col += vec3(1.0, 0.7, 0.6) * s * uStars * 1.5; }
         gl_FragColor = vec4(col, 1.0);
         #include <tonemapping_fragment>
@@ -346,7 +346,7 @@ export function buildEnvironment(scene: THREE.Scene, root: THREE.Object3D, rende
     for (let i = 0; i < N * 2; i++) { if (Math.abs(track.samples[i % N].curvature) < 0.0025) { run++; if (run > bestLen) { bestLen = run; best = i - run + 1; } } else run = 0; }
     const ribG = new THREE.TorusGeometry(WALL_OFFSET + 3, 0.7, 6, quality > 0 ? 24 : 14, Math.PI);
     const ribs = Math.min(18, Math.floor(bestLen / 6));
-    const ribMesh = new THREE.InstancedMesh(ribG, bone, ribs);
+    const ribMesh = new THREE.InstancedMesh(ribG, new THREE.MeshStandardMaterial({ color: 0x9a8c74, roughness: 0.8 }), ribs);
     for (let k = 0; k < ribs; k++) {
       const s = track.samples[(best + 3 + k * 6) % N];
       m.compose(p.set(s.p.x, -2, s.p.z), q.setFromAxisAngle(UP, Math.atan2(s.n.x, s.n.z) + Math.PI / 2), sc.set(1, 1.35, 1)); ribMesh.setMatrixAt(k, m);

@@ -30,7 +30,7 @@ export const TRACKS: TrackDef[] = [
     scale: 1.3, grip: 0.95,
     exposure: 0.62, envIntensity: 0.5, fog: 0x14040a, fogNear: 220, fogFar: 1500,
     sky: { top: 0x020004, mid: 0x0e0208, horizon: 0x3a0610, sun: [-0.35, 0.42, -0.84], sunColor: 0xff3020, sunSize: 0.035, clouds: 0.45, stars: 1 },
-    sunColor: 0xff8070, sunIntensity: 0.8, hemi: 0.3, hemiSky: 0x6a4a66, hemiGround: 0x801808,
+    sunColor: 0xff8070, sunIntensity: 0.8, hemi: 0.3, hemiSky: 0x5a5070, hemiGround: 0x5a1006,
     wet: true, rain: false, night: true, lava: -0.25, lavaColor: 0xff2a10, terrain: 0.8,
     braziers: 1.6, spires: 1.6, trees: 0.35, volcanoes: 1, ash: 0.25, heat: 0.4, accent: '#e8233a',
   },

@@ -646,10 +646,10 @@ function buildPodium() {
     plate.position.set(x, h / 2, 2.55); g.add(plate);
   }
   // throne back with horns behind the winner
-  const back = new THREE.Mesh(new THREE.BoxGeometry(3.4, 4.5, 0.5), mat); back.position.set(0, 1.6 + 2.25, -2.4); back.castShadow = true; g.add(back);
+  const back = new THREE.Mesh(new THREE.BoxGeometry(3.0, 2.6, 0.35), mat); back.position.set(0, 1.6 + 1.3, -2.3); back.castShadow = true; g.add(back);
   const hornPts = [new THREE.Vector3(1.4, 0, 0), new THREE.Vector3(2.6, 1.6, 0.2), new THREE.Vector3(2.4, 3.6, 0.4), new THREE.Vector3(1.3, 4.6, 0.6)];
   const hg = horn(hornPts, 0.45, 14);
-  for (const sx of [1, -1]) { const h = new THREE.Mesh(hg, boneM); h.scale.x = sx; h.position.set(0, 1.6 + 4.2, -2.4); h.castShadow = true; g.add(h); }
+  for (const sx of [1, -1]) { const h = new THREE.Mesh(hg, boneM); h.scale.x = sx; h.position.set(0, 1.6 + 2.4, -2.3); h.castShadow = true; g.add(h); }
   // burning sigil on the ground
   const sig = new THREE.Mesh(new THREE.PlaneGeometry(16, 16).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: sigilTexture(), color: new THREE.Color(0xff3a10).multiplyScalar(2.5), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
   sig.position.set(0, 0.08, 1); g.add(sig);

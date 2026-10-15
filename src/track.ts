@@ -100,7 +100,7 @@ export class Track {
     const A = assets.asphalt;
     const roadMat = new THREE.MeshStandardMaterial({
       map: A.map, normalMap: A.normalMap, roughnessMap: A.roughnessMap,
-      color: wet ? 0x4a2a28 : 0x6a5a54, roughness: wet ? 0.22 : 0.95, metalness: wet ? 0.2 : 0, envMapIntensity: wet ? 1.6 : 0.8,
+      color: wet ? 0x4a2a28 : 0x6a5a54, roughness: wet ? 0.4 : 0.95, metalness: wet ? 0.2 : 0, envMapIntensity: wet ? 1.6 : 0.8,
     });
     roadMat.normalScale.set(0.8, 0.8);
     const road = new THREE.Mesh(this.ribbon(-ROAD_WIDTH / 2, ROAD_WIDTH / 2, 0.02, 3.2, 6), roadMat); road.receiveShadow = true; scene.add(road);
