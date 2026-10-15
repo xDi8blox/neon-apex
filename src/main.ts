@@ -7,6 +7,7 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js';
 import { SSRPass } from 'three/examples/jsm/postprocessing/SSRPass.js';
+import { FXAAPass } from 'three/examples/jsm/postprocessing/FXAAPass.js';
 import { loadAssets, loadHdri, Assets } from './assets';
 import { buildCar, flameUniforms } from './carmodel';
 import { Track, ROAD_WIDTH, CURB_WIDTH, WALL_OFFSET, textTexture } from './track';
@@ -102,8 +103,10 @@ let speedPass: ShaderPass | null = null;
 function setupPost() {
   if (composer) { for (const p of composer.passes) p.dispose?.(); composer.dispose(); composer = null; speedPass = null; }
   if (quality === 0) return;
+  // the lens flare copies the framebuffer, which is invalid on MSAA targets: use FXAA instead on flare tracks
+  const flare = !trackDef.night && !trackDef.rain;
   const rt = new THREE.WebGLRenderTarget(window.innerWidth * renderer.getPixelRatio(), window.innerHeight * renderer.getPixelRatio(),
-    { type: THREE.HalfFloatType, samples: quality > 1 ? 4 : 2 });
+    { type: THREE.HalfFloatType, samples: flare ? 0 : quality > 1 ? 4 : 2 });
   composer = new EffectComposer(renderer, rt);
   if (trackDef.wet && quality > 1 && track.roadMesh) {
     const ssr = new SSRPass({ renderer, scene, camera, width: window.innerWidth, height: window.innerHeight, selects: [track.roadMesh], groundReflector: null });
@@ -116,10 +119,11 @@ function setupPost() {
     gtao.updateGtaoMaterial({ radius: 0.6, distanceExponent: 1.5, thickness: 1.5, scale: 1, samples: 12 });
     composer.addPass(gtao);
   }
-  composer.addPass(new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), trackDef.night ? 0.75 : quality > 1 ? 0.5 : 0.4, 0.45, trackDef.night ? 1.0 : 1.4));
+  composer.addPass(new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), trackDef.night ? 0.45 : quality > 1 ? 0.5 : 0.4, 0.45, trackDef.night ? 1.6 : 1.4));
   speedPass = new ShaderPass(SpeedShader);
   composer.addPass(speedPass);
   composer.addPass(new OutputPass());
+  if (flare) composer.addPass(new FXAAPass());
 }
 
 // ---------------- world (per track) ----------------
@@ -618,7 +622,7 @@ function buildPodium() {
   const g = new THREE.Group();
   const s = track.samples[Math.floor(track.N * 0.03)];
   const mat = new THREE.MeshStandardMaterial({ color: 0x1b2230, metalness: 0.6, roughness: 0.35 });
-  const trim = new THREE.MeshStandardMaterial({ color: 0x000000, emissive: new THREE.Color(trackDef.accent), emissiveIntensity: 4 });
+  const trim = new THREE.MeshStandardMaterial({ color: 0x000000, emissive: new THREE.Color(trackDef.accent), emissiveIntensity: 1.5 });
   const steps: [number, number, string][] = [[0, 1.2, '1'], [-4.4, 0.8, '2'], [4.4, 0.5, '3']];
   for (const [x, h, label] of steps) {
     const b = new THREE.Mesh(new THREE.BoxGeometry(4.2, h, 5.6), mat); b.position.set(x, h / 2, 0); b.castShadow = b.receiveShadow = true; g.add(b);

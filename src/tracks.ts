@@ -28,9 +28,9 @@ export const TRACKS: TrackDef[] = [
     id: 'harbour', name: 'Neon Harbour', subtitle: 'Night city · wet streets', tod: 'NIGHT',
     control: [[0, 0], [0, -170], [25, -215], [90, -225], [210, -225], [255, -200], [262, -150], [228, -110], [238, -62], [305, -45], [345, 0], [340, 70], [285, 105], [200, 105], [150, 135], [140, 195], [95, 240], [15, 240], [-28, 195], [-25, 100]],
     scale: 1.3, grip: 0.95, hdri: 'shanghai_bund',
-    exposure: 0.85, bgIntensity: 0.55, envIntensity: 0.7, fog: 0x0b0d1c, fogNear: 300, fogFar: 1700,
+    exposure: 0.5, bgIntensity: 0.3, envIntensity: 0.45, fog: 0x0b0d1c, fogNear: 300, fogFar: 1700,
     sunColor: 0x8fa6ff, sunIntensity: 0.6, hemi: 0.12, wet: true, rain: false, night: true,
-    lamp: 9, windows: 2.4, neon: true, grass: 0x3a4a3a, trees: 0.45, accent: '#ff2d75',
+    lamp: 5, windows: 1.4, neon: true, grass: 0x3a4a3a, trees: 0.45, accent: '#ff2d75',
   },
   {
     id: 'highland', name: 'Highland Storm', subtitle: 'Overcast · heavy rain', tod: 'RAIN',
