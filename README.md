@@ -1,5 +1,7 @@
 # NEON APEX
 
+**▶ [Play in your browser](https://xdi8blox.github.io/neon-apex/)**
+
 **A golden-hour street circuit racer that runs entirely in the browser.** Physically based rendering lights a licensed glTF supercar with an HDRI and fills the circuit with CC0 PBR surfaces. The full post stack includes ambient occlusion, bloom, speed blur, lens flare and optional screen-space reflections on a wet road. Under it sits a hand-written tire-model physics sim, AI rivals that follow a computed racing line, a nitro system and procedural audio. There is no backend.
 
 ![Mid-race gameplay](screenshots/gameplay.png)
