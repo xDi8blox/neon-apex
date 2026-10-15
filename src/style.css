@@ -220,3 +220,13 @@ body.swapped .t-right { right: auto; left: calc(14px + env(safe-area-inset-left)
 
 .menu-wide > button.back { width: auto; min-width: 180px; margin: 0 auto; }
 .row3 label { justify-content: center; }
+/* touch: keep the score clear of the top buttons + nitro bar */
+body.touch #h-scorebox { top: auto; bottom: 126px; left: calc(16px + env(safe-area-inset-left)); transform: none; text-align: left; }
+body.touch.swapped #h-scorebox { left: auto; right: calc(16px + env(safe-area-inset-right)); text-align: right; }
+body.touch #popups { top: 36%; } body.touch #combo { top: 27%; }
+@media (max-height: 500px) {
+  #g-best, .gpanel .hint { display: none; }
+  .gpanel h2 { margin-bottom: 2px; font-size: 16px; }
+  .screen.results .card { width: min(520px, 62vw); padding: 10px 14px; max-height: 96vh; }
+  .menu-col .tag { display: none; }
+}

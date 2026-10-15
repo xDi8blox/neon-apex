@@ -21,12 +21,26 @@ const hold = async (sel, down) => {
 };
 
 await page.goto(URL);
-await page.waitForFunction(() => window.__game && !document.getElementById('btn-start').disabled, null, { timeout: 300000 });
-const info = await page.evaluate(() => ({ touch: document.body.classList.contains('touch'), phone: document.body.classList.contains('phone'), q: document.getElementById('opt-quality').value, w: innerWidth, h: innerHeight }));
+await page.waitForFunction(() => window.__game?.screen === 'main', null, { timeout: 300000 });
+const info = await page.evaluate(() => ({ touch: document.body.classList.contains('touch'), phone: document.body.classList.contains('phone'), w: innerWidth, h: innerHeight }));
 console.log('device', JSON.stringify(info));
-if (!info.touch || info.q !== '0') fail('touch mode / mobile preset not auto-selected');
-await page.tap('#btn-start');
-await page.waitForTimeout(1500);
+if (!info.touch) fail('touch mode not auto-detected');
+await page.tap('#m-options'); await page.waitForTimeout(600);
+if ((await page.inputValue('#o-quality')) !== '0') fail('mobile preset not auto-selected');
+await page.tap('#scr-options [data-back]'); await page.waitForTimeout(600);
+// garage on touch: switch car, then back
+await page.tap('#m-garage'); await page.waitForTimeout(1200);
+await page.tap('#g-next'); await page.waitForTimeout(400);
+if ((await page.textContent('#g-name')) !== 'GT Apex') fail('garage arrow tap failed');
+await page.screenshot({ path: 'screenshots/mobile-garage.png', timeout: 300000 });
+await page.tap('#scr-garage [data-back]'); await page.waitForTimeout(600);
+// play -> quick race -> track select -> start
+await page.tap('#m-play'); await page.waitForTimeout(700);
+await page.tap('[data-mode=quick]'); await page.waitForTimeout(700);
+await page.screenshot({ path: 'screenshots/mobile-tracks.png', timeout: 300000 });
+await page.tap('#t-start');
+await page.waitForFunction(() => window.__game.state === 'intro', null, { timeout: 300000, polling: 300 });
+await page.waitForTimeout(1000);
 await page.touchscreen.tap(300, 200); // tap to skip the intro
 await page.waitForFunction(() => window.__game.state === 'race', null, { timeout: 300000, polling: 300 });
 if (!(await page.isVisible('.tb.gas'))) fail('touch buttons not visible during race');

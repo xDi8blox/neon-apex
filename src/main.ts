@@ -1147,6 +1147,8 @@ function setLoad(f: number, label: string) { $('ld-fill').style.width = `${Math.
     bankDrift(); hud.flash('FINISH!', 2.4); state = 'finishing'; finishT = 0;
   },
   get state() { return state; },
+  get countdown() { return countdown; },
+  get delta() { return document.getElementById('h-delta')!.textContent; },
   get screen() { return screen; },
   get mode() { return mode; },
   get track() { return worldId; },
