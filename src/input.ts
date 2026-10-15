@@ -1,10 +1,13 @@
+import { TouchControls } from './touch';
 /** Keyboard + Gamepad input aggregation. */
 export class Input {
   keys = new Set<string>();
   private pressed = new Set<string>();
   private padPrev: boolean[] = [];
   usingPad = false;
+  touch: TouchControls;
   constructor() {
+    this.touch = new TouchControls(code => this.pressed.add(code));
     window.addEventListener('keydown', e => {
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
       if (!this.keys.has(e.code)) this.pressed.add(e.code);
@@ -39,6 +42,12 @@ export class Input {
     let steer = ((k.has('KeyD') || k.has('ArrowRight')) ? 1 : 0) - ((k.has('KeyA') || k.has('ArrowLeft')) ? 1 : 0);
     let handbrake = k.has('Space');
     let nitro = k.has('ShiftLeft') || k.has('ShiftRight') || k.has('KeyN');
+    const t = this.touch;
+    if (t.active) {
+      if (t.steer !== 0) steer = t.steer;
+      throttle = Math.max(throttle, t.throttle); brake = Math.max(brake, t.brake);
+      handbrake = handbrake || t.handbrake; nitro = nitro || t.nitro;
+    }
     const p = this.pad();
     if (p) {
       const ax = p.axes[0] ?? 0;

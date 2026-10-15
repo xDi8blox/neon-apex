@@ -32,7 +32,7 @@ export class Hud {
     const s0 = track.samples[0]; const [sx, sy] = this.toMap(s0.p.x, s0.p.z);
     c.fillStyle = '#fff'; c.fillRect(sx - 6, sy - 1.5, 12, 3);
   }
-  show(on: boolean) { this.el('hud').classList.toggle('hidden', !on); }
+  show(on: boolean) { this.el('hud').classList.toggle('hidden', !on); document.body.classList.toggle('racing', on); }
   flash(text: string, t: number) { const m = this.el('h-msg'); m.textContent = text; m.className = text.length > 4 ? 'small' : ''; this.msgT = t; }
   lights(countdown: number) {
     const L = this.el('lights'); const n = Math.min(5, Math.max(0, Math.floor((4 - countdown) / 3 * 5) + 1));

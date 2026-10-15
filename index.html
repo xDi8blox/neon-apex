@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#05080f" />
   <meta name="description" content="NEON APEX - a 3D browser racing game built with Three.js" />
   <title>NEON APEX — Browser Racing</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏁</text></svg>" />
@@ -25,7 +28,16 @@
     <div id="lights"><i></i><i></i><i></i><i></i><i></i></div>
   </div>
 
-  <div id="letterbox"><div class="top"></div><div class="bot"><span>NEON APEX · VENICE SUNSET CIRCUIT</span><em>ENTER to skip</em></div></div>
+  <div id="touch">
+    <div class="t-top"><button id="t-pause" data-tap="Escape">II</button><button id="t-cam" data-tap="KeyC">CAM</button><button id="t-tilt">TILT OFF</button><button id="t-fs">⛶</button></div>
+    <div class="t-left"><div class="tb steer" data-hold="left">◀</div><div class="tb steer" data-hold="right">▶</div></div>
+    <div class="t-right">
+      <div class="col"><div class="tb small nitro" data-hold="nitro">N₂O</div><div class="tb small" data-hold="drift">DRIFT</div></div>
+      <div class="col"><div class="tb brake" data-hold="brake">BRAKE</div><div class="tb gas" data-hold="gas">GAS</div></div>
+    </div>
+  </div>
+  <div id="rotate"><div>⟳</div><p>Rotate your phone to landscape</p></div>
+  <div id="letterbox"><div class="top"></div><div class="bot"><span>NEON APEX · VENICE SUNSET CIRCUIT</span><em>ENTER / TAP to skip</em></div></div>
   <div id="menu" class="screen">
     <div class="card">
       <h1>NEON<span>APEX</span></h1>
@@ -35,7 +47,7 @@
         <label>Opponents <select id="opt-ai"><option>0</option><option>3</option><option selected>5</option><option>7</option></select></label>
         <label>Difficulty <select id="opt-diff"><option value="0.88">Easy</option><option value="0.95" selected>Medium</option><option value="1.0">Hard</option></select></label>
         <label>Road <select id="opt-wet"><option value="0">Dry</option><option value="1">Wet</option></select></label>
-        <label>Graphics <select id="opt-quality"><option value="0">Low</option><option value="1">Medium</option><option value="2">High</option></select></label>
+        <label>Graphics <select id="opt-quality"><option value="0">Low / Mobile</option><option value="1">Medium</option><option value="2">High</option></select></label>
       </div>
       <button id="btn-start" class="primary">START RACE</button>
       <div class="best">Best lap: <b id="menu-best">--</b></div>

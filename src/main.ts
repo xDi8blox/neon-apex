@@ -22,7 +22,10 @@ const LS_BEST = 'neonapex.bestLap', LS_QUALITY = 'neonapex.quality', LS_WET = 'n
 const params = new URLSearchParams(location.search);
 
 // ---------------- settings ----------------
-const defaultQuality = /Mobi|Android/i.test(navigator.userAgent) ? 0 : 1;
+import { isPhone, isTouchDevice } from './touch';
+const phone = isPhone() || /iPhone|Android.+Mobile/i.test(navigator.userAgent);
+const defaultQuality = phone ? 0 : 1; // phones get the Mobile preset
+if (phone) document.body.classList.add('phone');
 let quality = Number(params.get('quality') ?? localStorage.getItem(LS_QUALITY) ?? defaultQuality);
 if (!(quality >= 0 && quality <= 2)) quality = 1;
 ($('opt-quality') as HTMLSelectElement).value = String(quality);
@@ -30,8 +33,9 @@ const wet = (params.get('wet') ?? localStorage.getItem(LS_WET) ?? '0') === '1';
 ($('opt-wet') as HTMLSelectElement).value = wet ? '1' : '0';
 
 // ---------------- renderer / scene ----------------
+if (isTouchDevice() && quality === 0) { const ai = document.getElementById('opt-ai') as HTMLSelectElement; ai.value = '3'; }
 const renderer = new THREE.WebGLRenderer({ antialias: quality > 0, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, [0.75, 1, 1.5][quality]));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, [phone ? 0.8 : 0.75, 1, 1.5][quality]));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.55;
@@ -523,6 +527,7 @@ window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight); composer?.setSize(window.innerWidth, window.innerHeight);
 });
+document.addEventListener('pointerdown', () => { if (state === 'intro') skipIntro = true; });
 document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'race') pause(true); });
 
 // debug / automation hooks (used by the screenshot script)
