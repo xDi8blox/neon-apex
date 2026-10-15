@@ -164,8 +164,8 @@ function ensureWorld(id: string, onProgress?: (f: number) => void): Promise<void
     renderer.toneMappingExposure = def.exposure;
     skids = new SkidMarks(world, [600, 1500, 3000][quality]);
     smoke = new Smoke(world, [150, 400, 700][quality], [0.22, 0.17, 0.15]); // ash-dark tire smoke
-    fire = new Smoke(world, [160, 320, 520][quality], [1, 0.32, 0.05], true); // hellfire: Soul Burn trails, banishments
-    Object.assign(fire, { fade: 1.5, grow: 1.2, gravity: -5, drag: 1.2, baseSize: 0.9 });
+    fire = new Smoke(world, [160, 320, 520][quality], [1, 0.3, 0.04], true, 0.5); // hellfire: Soul Burn trails, banishments
+    Object.assign(fire, { fade: 1.8, grow: 0.35, gravity: -5, drag: 1.2, baseSize: 0.5 });
     sparks = new Smoke(world, [120, 250, 400][quality], [1, 0.55, 0.15], true);
     Object.assign(sparks, { fade: 2.2, grow: -0.5, gravity: 14, drag: 0.6, baseSize: 0.45 });
     shock = new Shockwaves(world);
@@ -347,7 +347,7 @@ function takedown(r: Racer) {
   addScore(1000, 'BANISHED!', 'big red');
   slowmo(1.1); shake = 1; audio.boom(1);
   emitSparks(r.phys.pos, r.phys.velocity(new THREE.Vector3()), 40);
-  emitFire(r.phys.pos, r.phys.velocity(new THREE.Vector3()), 50, 6);
+  emitFire(r.phys.pos, r.phys.velocity(new THREE.Vector3()), 30, 4);
   shock.spawn(r.phys.pos, 0xff2a08, true);
 }
 const fireP = new THREE.Vector3();
@@ -394,7 +394,7 @@ function nearMissTick(dt: number) {
 }
 function fireShockwave() {
   shock.spawn(player.phys.pos, 0xff4a10); shock.spawn(player.phys.pos, 0xff1a08, true);
-  emitFire(player.phys.pos, player.phys.velocity(new THREE.Vector3()), 60, 10);
+  emitFire(player.phys.pos, player.phys.velocity(new THREE.Vector3()), 30, 6);
   if (speedPass) speedPass.uniforms.uShock.value = 1;
   audio.boom(0.6); shake = Math.min(1, shake + 0.5);
   let hit = 0;

@@ -1,26 +1,31 @@
 # Credits & Third-Party Assets
 
 The code is MIT-licensed (see `LICENSE`). Bundled third-party assets keep their own licenses, listed below.
-Anything not listed here (barrier/curb/marking textures, flare sprites, metallic-flake map, scenery geometry,
-nitro flame shader, all audio) is generated procedurally at runtime and is part of this project.
+
+Everything not listed here is generated procedurally at runtime and is part of this project. That covers:
+- the four demon cars: bodies, horns, spikes, skull grilles, engines, rune decals and wheels
+- the ember sky and lava shaders, and the obsidian terrain
+- the braziers, bone, skull and horn ornaments, spires and volcanoes
+- the ash, ember and fire particles, and the sigil and rune textures
+- the barrier, curb and marking textures
+- all music and sound effects
+
+No 3D models, HDRIs or audio files are shipped.
 
 | File(s) | Asset | Author | Source | License |
 |---|---|---|---|---|
-| `public/models/ferrari.glb`, `public/models/ferrari_ao.png` | "Ferrari 458 Italia" | **vicent091036** | Sketchfab (model 57bf6cc56931426e87494f554df1dab6), redistributed in the [three.js examples](https://github.com/mrdoob/three.js/tree/dev/examples/models/gltf) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
-| `public/models/ferrari_lod.glb` | Derivative of the above: normals/UVs stripped, simplified to ~15% with meshoptimizer, meshopt-compressed (EXT_meshopt_compression) | derived by this project | — | CC BY 4.0 (inherits) |
-| `public/hdri/venice_sunset_{1k,2k}.hdr` | "Venice Sunset" HDRI | Greg Zaal | [Poly Haven](https://polyhaven.com/a/venice_sunset) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
-| `public/hdri/shanghai_bund_{1k,2k}.hdr` | "Shanghai Bund" HDRI (Neon Harbour night sky) | Greg Zaal | [Poly Haven](https://polyhaven.com/a/shanghai_bund) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
-| `public/hdri/kloofendal_overcast_puresky_{1k,2k}.hdr` | "Kloofendal Overcast (Pure Sky)" HDRI (Highland Storm) | Greg Zaal | [Poly Haven](https://polyhaven.com/a/kloofendal_overcast_puresky) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
-| `public/textures/asphalt_*.{ktx2,jpg}` | Asphalt025C (color, normal GL, roughness) | ambientCG (Lennart Demes) | [ambientCG](https://ambientcg.com/view?id=Asphalt025C) | [CC0 1.0](https://docs.ambientcg.com/license/) |
-| `public/textures/grass_*.{ktx2,jpg}` | Grass004 (color, normal GL, roughness) | ambientCG (Lennart Demes) | [ambientCG](https://ambientcg.com/view?id=Grass004) | [CC0 1.0](https://docs.ambientcg.com/license/) |
-| `public/draco/*` | Draco glTF decoder | Google | three.js `examples/jsm/libs/draco` | Apache-2.0 |
+| `public/fonts/PirataOne-Regular.ttf` | "Pirata One" (logo, headings, buttons) | Rodrigo Fuenzalida, Nicolas Massi | [Google Fonts](https://fonts.google.com/specimen/Pirata+One) | [SIL OFL 1.1](public/fonts/OFL-PirataOne.txt) |
+| `public/fonts/MetalMania-Regular.ttf` | "Metal Mania" (HUD numbers, body text) | Open Window | [Google Fonts](https://fonts.google.com/specimen/Metal+Mania) | [SIL OFL 1.1](public/fonts/OFL-MetalMania.txt) |
+| `public/textures/asphalt_*.{ktx2,jpg}` | Asphalt025C (color, normal GL, roughness), tinted to basalt in-game | ambientCG (Lennart Demes) | [ambientCG](https://ambientcg.com/view?id=Asphalt025C) | [CC0 1.0](https://docs.ambientcg.com/license/) |
 | `public/basis/*` | Basis Universal transcoder | Binomial LLC | three.js `examples/jsm/libs/basis` | Apache-2.0 |
 
-**Modifications:** the Ferrari is recolored per car and its materials are replaced at runtime: clearcoat car paint with a metallic-flake normal map, chrome, tinted glass, and emissive head-, tail- and brake lights. The textures were re-encoded to KTX2 (Basis Universal ETC1S for color and roughness, UASTC for normals, with mipmaps) using the `basisu` CLI (WASI build); JPG copies are kept as a fallback.
+The fonts are shipped unmodified, together with their OFL license texts.
 
-**Note on the car model:** the original Sketchfab page now reports the model as disabled. The CC BY 4.0 attribution above is the one used by three.js, which redistributes the file. If you need certainty before a commercial use, swap in a model whose license you can verify directly. `src/carmodel.ts` maps materials by name, so another glTF car only needs its material and wheel node names updated.
+The textures were re-encoded to KTX2 (Basis Universal ETC1S for color and roughness, UASTC for normals, with mipmaps) using the `basisu` CLI. JPG copies are kept as a fallback.
 
-Sound: none. All audio is synthesized with the Web Audio API.
+**Removed in the HELLDRIVE redesign:**
+- the Ferrari 458 glTF model (CC BY 4.0) and its Draco decoder
+- the Poly Haven HDRIs
+- the ambientCG grass textures
 
-
-The four cars share the CC BY 4.0 Ferrari model above; their bodykits (wings, splitters, light bar, mud flaps, ducktail, underglow) are procedural geometry made for this project. Music and all sound effects are synthesized at runtime with Web Audio (no samples).
+None of these is used any more.

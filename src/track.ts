@@ -129,7 +129,7 @@ export class Track {
       const g = this.wall(side * (WALL_OFFSET + 0.3), 1.1, 0.6);
       const m = new THREE.Mesh(g, wallMat); m.castShadow = quality > 0; m.receiveShadow = true; scene.add(m);
     }
-    // --- neon light strips on top of the barriers (night tracks)
+    // --- ember strips on top of the barriers (night tracks)
     // --- iron spikes crowning both barriers
     {
       const step = [5, 3, 2][quality], count = Math.floor(N / step) * 2;

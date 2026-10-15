@@ -15,19 +15,23 @@ await page.click('#m-play'); await page.waitForTimeout(2500); await shot('modes'
 await page.click('[data-mode=quick]'); await page.waitForTimeout(2500); await shot('tracks');
 await page.click('#scr-track [data-back]'); await page.click('#scr-mode [data-back]'); await page.waitForTimeout(600);
 await page.click('#m-garage'); await page.waitForTimeout(3500); await shot('garage');
-await page.click('#g-next'); await page.click('#g-next'); await page.click('#g-next'); await page.waitForTimeout(3000); await shot('garage-drifter');
+await page.click('#g-next'); await page.click('#g-next'); await page.click('#g-next'); await page.waitForTimeout(3000); await shot('garage-succubus');
 await page.click('#scr-garage [data-back]'); await page.waitForTimeout(600);
 await page.click('#m-options'); await page.waitForTimeout(1500); await shot('options');
 await page.click('#scr-options [data-back]'); await page.waitForTimeout(600);
-for (const [id, name] of [['harbour', 'night-harbour'], ['highland', 'rain-highland']]) {
+for (const [id, name] of [['sunset', 'lava-fields'], ['harbour', 'bone-cathedral'], ['highland', 'ashen-storm']]) {
   await page.evaluate(t => window.__game.quick({ track: t, laps: 2, opponents: 5 }), id);
   await page.waitForFunction(() => window.__game.state === 'intro', null, T); await page.evaluate(() => window.__game.skipIntro());
   await page.waitForFunction(() => window.__game.state === 'race' && window.__game.player.speed > 30, null, T);
   await page.waitForTimeout(2000); await shot(name);
+  if (id === 'sunset') {
+    await page.evaluate(() => window.__game.setNitro(true)); await page.waitForTimeout(1500); await shot('soul-burn');
+    await page.evaluate(() => window.__game.setNitro(false)); await page.waitForTimeout(1500);
+  }
   if (id === 'harbour') {
     await page.evaluate(() => { window.__game.demo('drift'); window.__game.demo('nearmiss'); }); await page.waitForTimeout(250); await shot('combo-nearmiss');
-    await page.evaluate(() => window.__game.demo('shock')); await page.waitForTimeout(250); await shot('shockwave');
-    await page.evaluate(() => window.__game.demo('takedown')); await page.waitForTimeout(300); await shot('takedown');
+    await page.evaluate(() => window.__game.demo('shock')); await page.waitForTimeout(250); await shot('hellblast');
+    await page.evaluate(() => window.__game.demo('takedown')); await page.waitForTimeout(300); await shot('banished');
   }
 }
 await page.evaluate(() => window.__game.finishNow());

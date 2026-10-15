@@ -1,85 +1,126 @@
-# NEON APEX
+# HELLDRIVE
 
 **▶ [Play in your browser](https://xdi8blox.github.io/neon-apex/)**
 
-**A golden-hour street circuit racer that runs entirely in the browser.** Physically based rendering lights a licensed glTF supercar with an HDRI and fills the circuit with CC0 PBR surfaces. The full post stack includes ambient occlusion, bloom, speed blur, lens flare and optional screen-space reflections on a wet road. Under it sits a hand-written tire-model physics sim, AI rivals that follow a computed racing line, a nitro system and procedural audio. There is no backend.
+**Race the damned through three hellscapes in demonic machines.** HELLDRIVE is an arcade circuit racer that runs entirely in the browser (Three.js, no backend). Every car, track prop, sky and sound is generated from code: horned and spiked demon cars with skull grilles and rune glow, obsidian terrain over rivers of flowing lava, burning braziers, bone gates, erupting volcanoes, falling ash, and an industrial infernal soundtrack. Under it sits a hand-written tire-model physics sim and AI rivals that follow a computed racing line.
 
-![Mid-race gameplay](screenshots/gameplay.png)
+<sub>The repository keeps its original name (`neon-apex`), and so does the URL. The game itself was rebranded from NEON APEX to HELLDRIVE.</sub>
 
-| Main menu (attract mode) | Cinematic intro flyby |
+![Lava Fields](screenshots/lava-fields.png)
+
+| Main menu | The Forge (garage) |
 |---|---|
-| ![Menu](screenshots/menu.png) | ![Intro](screenshots/intro.png) |
-| **Race start** | **Nitro boost** |
-| ![Start](screenshots/race-start.png) | ![Nitro](screenshots/nitro.png) |
-| **TV trackside camera** | **Wet road (SSR)** |
-| ![TV camera](screenshots/tv-camera.png) | ![Wet](screenshots/wet-gameplay.png) |
-
-| **Mobile (iPhone landscape, touch controls)** | |
-| ![Mobile](screenshots/mobile.png) | |
-
-<sub>Screenshots come from headless Chromium on SwiftShader (software GL) at the High preset, captured by `scripts/screenshots.mjs`. A real GPU looks the same and runs far faster.</sub>
-
-## Features
-
-**Visuals**
-- **Licensed glTF car** (Ferrari 458 Italia, CC BY 4.0; see [CREDITS.md](CREDITS.md)). Your car loads the full ~350k-triangle Draco model. AI cars use a meshopt-compressed LOD at about 15% of the triangles, with creased normals rebuilt at load time.
-- **Car materials**: `MeshPhysicalMaterial` paint with clearcoat and a procedural **metallic-flake** normal map, chrome, tinted glass, carbon fiber, and emissive head-, tail- and **brake lights** that feed bloom. Each car has a baked contact-shadow (AO) plane.
-- **HDRI lighting**: Poly Haven *Venice Sunset* (CC0) is used for the background and, through PMREM, for image-based lighting and reflections. The sun's direction is detected from the brightest texel of the HDRI, so shadows line up with the sky.
-- **PBR surfaces**: ambientCG asphalt and grass (CC0, color + normal + roughness) shipped as **KTX2 / Basis Universal** with JPG fallback. Lane markings are a separate decal layer, curbs are painted, and there is asphalt run-off.
-- **Wet road option**: a glossy, darker asphalt that reflects the HDRI. On High it adds an **SSR pass** (screen-space reflections) restricted to the road surface.
-- **Post stack**: ACES filmic tone mapping, **GTAO** ambient occlusion (High), MSAA render targets, Unreal bloom, **speed-scaled radial motion blur** and vignette, **lens flare with an anamorphic streak** on the sun.
-- **Nitro FX**: twin exhaust flames (additive animated shader), radial speed lines, chromatic fringe, extra FOV kick and a whoosh/roar sound.
-- **Cinematic intro**: a letterboxed crane-and-sweep flyby over the grid before the lights. Skip it with Enter.
-- **Scenery**: instanced broadleaf and conifer trees, reflective glass towers with lit windows, street lamps, tire stacks on the outside of tight corners, emissive sponsor billboards, a grandstand with crowd, and a start/finish gantry.
-- **Quality tiers** (Low / Medium / High) control pixel ratio, MSAA, shadow resolution, GTAO/SSR, bloom, lens flare, HDRI resolution, car detail, scenery density and particle budgets.
-
-**Driving model** (`src/car.ts`)
-- Bicycle-model vehicle dynamics at a fixed 120 Hz step: slip angles, saturating lateral tire forces, longitudinal load transfer and a friction circle
-- Rear-wheel drive, a 6-speed auto gearbox with torque curve and limiter, speed-sensitive rate-limited steering, and a handbrake for drifts
-- **Nitro**: a separate thrust that bypasses traction. The tank refills slowly over time and faster while drifting, and AI cars use it on straights
-- Stability assist, grass penalty, and barrier and car-to-car collisions
-
-**Mobile**
-- On-screen touch controls that only appear on touch devices: steer ◀ ▶, GAS, BRAKE, DRIFT, N₂O (multi-touch), plus pause, camera, fullscreen (with landscape lock where supported)
-- Optional **tilt-to-steer** via DeviceOrientation, including the iOS permission request
-- A landscape layout with a "rotate your phone" prompt in portrait, and a compact responsive HUD and menus
-- Page scroll, pinch and double-tap zoom, and long-press menus are blocked
-- Phones auto-pick the **Low / Mobile** preset: reduced pixel ratio, no post-processing/SSAO/SSR, LOD cars, 1k HDRI, lighter scenery, 3 rivals
-- `npm run test:mobile` runs a Playwright iPhone-landscape emulation that taps the controls and checks the car responds
-
-**Racing**
-- 0–7 AI rivals on three difficulties: a curvature-based racing line, grip-limited target speeds with a braking pass, lane-change avoidance, mild rubber-banding
-- 5-light countdown, lap timing and count, live positions, results table, **best lap saved in `localStorage`**
-- HUD: speedometer with RPM arc and gear, **nitro meter**, minimap, lap times, FPS
-- Cameras: Chase, Bumper, TV trackside (auto-zoom), Orbit
-- Pause menu, auto-pause on tab hide, attract mode behind the menu
-
-**Audio**: fully procedural Web Audio (engine with RPM pitch, tire screech, nitro roar and whoosh, impacts, beeps) with a mute toggle. No audio files are used.
-
-## Full game (v2)
-
-- **Loading screen** with animated neon car, progress bar and gameplay tips.
-- **Menus** with slide/skew transitions, a neon wipe between worlds and attract-mode camera swoops behind every screen.
-- **Modes:** Quick Race · Championship (3 rounds, every circuit, points 10-8-6-5-4-3-2-1, standings between rounds, champion screen) · Time Trial (best lap saved as a translucent ghost + live delta).
-- **Garage:** 4 cars (Stradale, GT Apex, Storm Rally, Neon Drifter) with different physics and bodykits, stat bars, paint picker, rotating 3D showroom (drag to spin).
-- **3 tracks:** Sunset Circuit (golden hour, dry) · Neon Harbour (night city, wet streets, neon barrier strips) · Highland Storm (overcast, heavy rain, reduced grip, road spray).
-- **Options:** graphics quality, SFX and music volume, default camera, km/h / mph, touch layout (steer left/right), tilt steering, FPS counter, reset records. Difficulty, laps and opponents on the track screen.
-- **Fun systems:** drift combos up to ×5 with popups (wall hit loses the combo), near misses with slow-mo, bumps and TAKEDOWNS, nitro shockwave (ring + screen ripple, shoves rivals), PERFECT START / jump-start bog, sparks, finish-line slow-mo, a cinematic replay of the last ~10 s, then a podium with confetti and results.
-- **Procedural synthwave soundtrack** (menu and race intensities) on its own volume bus.
+| ![Menu](screenshots/menu.png) | ![Garage](screenshots/garage.png) |
+| **Lava Fields** | **Bone Cathedral** |
+| ![Lava Fields](screenshots/lava-fields.png) | ![Bone Cathedral](screenshots/bone-cathedral.png) |
+| **Ashen Storm** | **Soul Burn** |
+| ![Ashen Storm](screenshots/ashen-storm.png) | ![Soul Burn](screenshots/soul-burn.png) |
+| **Throne of Ash (podium)** | **Mobile (iPhone landscape)** |
+| ![Podium](screenshots/podium.png) | ![Mobile](screenshots/mobile.png) |
 
 | | |
 |---|---|
-| ![Loading](screenshots/loading.png) | ![Main menu](screenshots/menu.png) |
-| ![Modes](screenshots/modes.png) | ![Track select](screenshots/tracks.png) |
-| ![Garage](screenshots/garage.png) | ![Garage - Neon Drifter](screenshots/garage-drifter.png) |
-| ![Options](screenshots/options.png) | ![Neon Harbour](screenshots/night-harbour.png) |
-| ![Highland Storm](screenshots/rain-highland.png) | ![Drift combo + near miss](screenshots/combo-nearmiss.png) |
-| ![Shockwave](screenshots/shockwave.png) | ![Takedown](screenshots/takedown.png) |
-| ![Replay](screenshots/replay.png) | ![Podium](screenshots/podium.png) |
-| ![Championship standings](screenshots/standings.png) | ![Mobile garage](screenshots/mobile-garage.png) |
-| ![Mobile track select](screenshots/mobile-tracks.png) | ![Mobile race](screenshots/mobile.png) |
+| ![Loading](screenshots/loading.png) | ![Modes](screenshots/modes.png) |
+| ![Track select](screenshots/tracks.png) | ![Garage - Succubus](screenshots/garage-succubus.png) |
+| ![Hellblast](screenshots/hellblast.png) | ![Banished](screenshots/banished.png) |
+| ![Ember drift + near miss](screenshots/combo-nearmiss.png) | ![Replay](screenshots/replay.png) |
+| ![Standings](screenshots/standings.png) | ![Options](screenshots/options.png) |
+| ![Mobile garage](screenshots/mobile-garage.png) | ![Mobile track select](screenshots/mobile-tracks.png) |
 
-Tests: `npm run test:sim` (AI on every track × car, no wall contacts), `npm run test:mobile`, `npm run test:flow` (menus, garage, perfect start, 3-round championship, time-trial ghost). Screens: `node scripts/screens.mjs`.
+<sub>The screenshots are captured in headless Chromium on SwiftShader (software GL) by `scripts/screens.mjs` and `npm run test:mobile`. A real GPU shows the same image and runs far faster.</sub>
+
+## Identity
+
+- **Logo and type.** The blackletter **Helldrive** logo is set in *Pirata One*, and the HUD numbers in *Metal Mania*. Both are SIL OFL fonts bundled locally in `public/fonts`. The logo glows with an animated ember gradient.
+- **UI.**
+  - Cracked-stone panels (an SVG turbulence texture with molten fissures) in a red, orange and black palette.
+  - Ember and ash particles drift over every menu.
+  - Screen changes use a **fire wipe** combined with a glowing **screen crack**, and screens rise out of the heat or burn away.
+- **Modes.**
+  - *Damned Sprint*: a quick race.
+  - *Infernal Crown*: a 3-round championship.
+  - *Soul Trial*: a time trial against your own **wraith** ghost.
+
+## The demon machines (`src/carmodel.ts`)
+
+All four cars are procedural geometry, with no external models. Each one has:
+- a raked wedge body and an obsidian canopy
+- tapered bone horns, iron spikes and a **skull grille** with burning eye sockets
+- an **exposed engine** with a glowing core and intake stacks
+- **emissive rune bands**
+- spiked wheels with glowing rims
+- **flame-breathing exhausts** that idle softly and roar during Soul Burn
+
+Static parts are merged per material, so a car costs about 10 draw calls. The geometry is cached for each car, with one copy at player detail and one at AI detail.
+
+| Car | Style | Lore |
+|---|---|---|
+| **Hellhound** | Balanced; ram horns, spine spikes | Forged from the ribcage of the first hound to escape the Ninth Circle. |
+| **Baphomet GT** | Huge top speed; great horns frame an iron wing | The goat-king wanted a throne that could outrun prayers. |
+| **Cerberus** | Launches hard and grips in ash; three skulls, bone plating, ribcage roll bar | Built to guard the gates. Ash storms only make it hungrier. |
+| **Succubus** | Slides forever and drinks Soul Burn from drifts; bat-wing fins, tail spike, magenta underglow | Every slide draws a sliver of soul from the road. |
+
+The garage (*The Forge*) shows each car's stats, lore, a hellish paint palette and a drag-to-spin turntable.
+
+## The hellscapes (`src/scenery.ts`, `src/tracks.ts`)
+
+**Shared by all three tracks:**
+- **Sky:** a procedural ember sky shader with smoke clouds lit from below, a red sun or blood moon, and stars. The same sky is baked into PMREM, so the cars and the obsidian reflect the inferno.
+- **Terrain and lava:**
+  - Faceted **obsidian terrain** whose valleys fill with **flowing lava**. The lava is an emissive domain-warped fbm shader with a cooling crust and bright veins, which creates rivers and lakes wherever the rock dips.
+  - The rock glows where it meets the lava.
+- **Trackside:**
+  - **Burning braziers** with animated fire and glow pools.
+  - **Spiked iron barriers** with an ember stripe.
+  - **Skull piles** on the corners and giant **horn gates** over the straights.
+  - Gothic spires with burning windows, charred dead trees and obsidian shards.
+  - The stands of the damned.
+- **Atmosphere:**
+  - **Erupting volcanoes** on the horizon that throw lava bombs.
+  - **Falling ash** and **rising embers**.
+  - Post-process **heat haze**.
+
+**Each track:**
+- **Lava Fields:** a dying red sun over lava seas, with lens flare and strong heat haze.
+- **Bone Cathedral (night):** a blood moon, with a nave of giant **bone ribs** vaulting over the longest straight. The ossuary streets are blood-slick and get SSR reflections on High.
+- **Ashen Storm:** choking ash, howling wind, heavy fog and reduced grip.
+
+## Hellfire effects
+
+- **Soul Burn** (formerly nitro):
+  - hellfire exhaust trails
+  - a red and orange grade, ember speed lines and chromatic fringe
+  - a whoosh and roar
+- **Hellblast:** firing Soul Burn with a full tank releases the demonic shockwave. It spawns a ring and a spinning **pentagram sigil**, sends out a fire burst and a screen ripple, and shoves nearby rivals aside.
+- **Drifts:** drift sparks are **embers** and tire smoke is ash-dark. Drift combos are *Ember / Scorching / Infernal* drifts.
+- **Banishing:** a takedown **banishes** the rival in fire, with a fire burst, a sigil and a car that keeps burning while it wrecks.
+- **Podium:** it is now the **Throne of Ash**. It has obsidian altar steps, a horned throne, a burning floor sigil, flanking braziers and a shower of embers and ash.
+- **Audio** (all procedural Web Audio):
+  - *Music:* an industrial infernal soundtrack in D phrygian (Dm, E♭, B♭, C♯dim) with a distorted kick, metallic snare, anvil hits, galloping overdriven bass, a tolling bell and a choir pad.
+  - *Engines:* they **growl**, using sub-harmonic AM flutter, detuned beating and a tanh drive.
+
+## Gameplay systems (unchanged)
+
+- **Physics:** a fixed 120 Hz bicycle-model tire sim with slip angles, a friction circle, load transfer, a 6-speed gearbox and a handbrake.
+- **Racing:**
+  - 0–7 AI rivals that follow a racing line, with three difficulties.
+  - Lap timing, positions and records saved in `localStorage`.
+  - Replay, four cameras and a gamepad.
+- **Fun systems:** drift combos up to ×5, near-miss slow-mo, an unholy (perfect) start or a cursed jump start, takedowns and a finish slow-mo.
+- **Mobile:**
+  - Robust multi-touch controls: each finger is tracked by its identifier, with live hit-testing so sliding between ◀ and ▶ works.
+  - Tilt steering and a landscape layout.
+  - The Low preset is picked automatically.
+- **Quality tiers:** Low, Medium and High scale:
+  - pixel ratio, MSAA, shadows, GTAO and SSR
+  - bloom, lens flare and shader octaves (sky, lava)
+  - terrain resolution, car detail, prop densities and particle budgets
+
+**Tests:**
+- `npm run test:sim`: AI on every track × car, with no barrier contacts.
+- `npm run test:touch`: multi-touch regression.
+- `npm run test:mobile`
+- `npm run test:flow`: menus, garage, perfect start, a 3-round championship and the time-trial ghost.
 
 ## Controls
 
@@ -89,7 +130,7 @@ Tests: `npm run test:sim` (AI on every track × car, no wall contacts), `npm run
 | Brake / reverse | `S` / `↓` | LT |
 | Steer | `A` `D` / `←` `→` | Left stick |
 | Handbrake | `Space` | A / B |
-| Nitro | `Shift` / `N` | X / RB |
+| Soul Burn | `Shift` / `N` | X / RB |
 | Skip intro | `Enter` / `Esc` | Start |
 | Change camera | `C` | Y |
 | Pause | `Esc` / `P` | Start |
@@ -114,7 +155,7 @@ npm run test:sim   # headless physics/AI regression: 3 laps at 5 AI skill/nitro 
 npm run screenshots  # needs `npx playwright install chromium` and a running preview on :4173
 ```
 
-Handy URL flags: `?quality=0|1|2` forces a graphics preset, `?wet=1` turns on the wet road, `?gtao=0` disables ambient occlusion, and `?autopilot=1` lets the AI drive your car (used for screenshots).
+Handy URL flags: `?quality=0|1|2` forces a graphics preset, `?gtao=0` disables ambient occlusion, and `?autopilot=1` lets the AI drive your car (used for screenshots).
 
 ## Deploying to GitHub Pages
 
@@ -122,11 +163,11 @@ Handy URL flags: `?quality=0|1|2` forces a graphics preset, `?wet=1` turns on th
 
 ## Tech stack
 
-- [Three.js](https://threejs.org/) r186: rendering, post-processing (`EffectComposer`, `UnrealBloomPass`, custom `ShaderPass`), `Sky`
+- [Three.js](https://threejs.org/) r186: rendering, custom GLSL (sky, lava, hellfire), post-processing (`EffectComposer`, `UnrealBloomPass`, custom `ShaderPass`)
 - TypeScript (strict) + [Vite](https://vitejs.dev/)
-- Loaders: `GLTFLoader` + `DRACOLoader` + meshopt decoder, `KTX2Loader` (Basis Universal), `HDRLoader`
-- Post: `GTAOPass`, `SSRPass`, `UnrealBloomPass`, `Lensflare`, custom speed/nitro `ShaderPass`, `OutputPass`
-- Asset pipeline: glTF-Transform + meshoptimizer for the LOD, Basis Universal `basisu` for KTX2
+- Loaders: `KTX2Loader` (Basis Universal) for the road texture; everything else is procedural
+- Post: `GTAOPass`, `SSRPass`, `UnrealBloomPass`, `Lensflare`, custom speed / Soul Burn / heat-haze `ShaderPass`, `OutputPass`
+- Asset pipeline: Basis Universal `basisu` for KTX2
 - Custom vehicle physics (no physics engine dependency: the planar tire model is both lighter and more tunable than a rigid-body engine for this game)
 - Web Audio API, Canvas 2D (HUD and procedural textures), Gamepad API
 - Playwright for automated screenshots
@@ -136,13 +177,15 @@ Handy URL flags: `?quality=0|1|2` forces a graphics preset, `?wet=1` turns on th
 ```
 src/
   main.ts      game loop, state machine, AI controller, collisions, cameras, post-FX
-  assets.ts    asset loading (Draco/meshopt glTF, KTX2, HDR) with progress
-  carmodel.ts  car materials (flake paint, chrome, glass, lights), LOD, nitro flames
-  car.ts       vehicle dynamics + nitro
+  assets.ts    asset loading (KTX2 road texture, bundled fonts) with progress
+  carmodel.ts  procedural demon cars (horns, spikes, skulls, engine, runes), hellfire exhausts
+  car.ts       vehicle dynamics + Soul Burn
   track.ts     circuit spline, racing line, target speeds, road/curb/barrier geometry
-  scenery.ts   HDRI lighting, sun + lens flare, PBR ground, instanced scenery
-  effects.ts   skid marks and tire smoke
-  audio.ts     procedural engine/tire/impact audio
+  scenery.ts   ember sky, lava + obsidian terrain, braziers, bones, spires, volcanoes, ash
+  effects.ts   skid marks, smoke/fire/embers, Soul Burn rings + sigils, ember confetti
+  embers.ts    menu ember/ash overlay
+  audio.ts     procedural growling engine/tire/impact audio
+  music.ts     procedural industrial infernal soundtrack
   input.ts     keyboard + gamepad
   hud.ts       speedometer, minimap, timing
 scripts/
@@ -152,7 +195,7 @@ scripts/
 
 ## Credits
 
-Third-party assets and their licenses are listed in [CREDITS.md](CREDITS.md). The car model is **CC BY 4.0, by vicent091036**. The HDRI (Poly Haven) and PBR textures (ambientCG) are CC0.
+Third-party assets and their licenses are listed in [CREDITS.md](CREDITS.md). They are the Pirata One and Metal Mania fonts (SIL OFL 1.1) and the ambientCG asphalt texture (CC0). Everything else, including the cars, is procedural.
 
 ## License
 

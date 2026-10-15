@@ -39,7 +39,7 @@ export class Smoke {
   private pos: Float32Array; private vel: Float32Array; private life: Float32Array; private size: Float32Array;
   private geo = new THREE.BufferGeometry();
   private next = 0;
-  constructor(scene: THREE.Object3D, private count: number, color = [0.55, 0.54, 0.53], additive = false) {
+  constructor(scene: THREE.Object3D, private count: number, color = [0.55, 0.54, 0.53], additive = false, alpha = additive ? 1 : 0.22) {
     this.pos = new Float32Array(count * 3); this.vel = new Float32Array(count * 3);
     this.life = new Float32Array(count); this.size = new Float32Array(count);
     this.geo.setAttribute('position', new THREE.BufferAttribute(this.pos, 3));
@@ -55,7 +55,7 @@ export class Smoke {
         float a = smoothstep(0.5,0.0,r)*clamp(vLife,0.0,1.0)*uAlpha; gl_FragColor=vec4(uColor,a); }`,
     });
     mat.uniforms.uColor = { value: new THREE.Vector3(...color) };
-    mat.uniforms.uAlpha = { value: additive ? 1 : 0.22 };
+    mat.uniforms.uAlpha = { value: alpha };
     if (additive) { mat.blending = THREE.AdditiveBlending; }
     const pts = new THREE.Points(this.geo, mat); pts.frustumCulled = false; scene.add(pts);
   }
