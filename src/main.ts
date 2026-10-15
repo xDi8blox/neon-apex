@@ -8,12 +8,12 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js';
 import { SSRPass } from 'three/examples/jsm/postprocessing/SSRPass.js';
 import { FXAAPass } from 'three/examples/jsm/postprocessing/FXAAPass.js';
-import { loadAssets, loadHdri, Assets } from './assets';
+import { loadAssets, Assets } from './assets';
 import { buildCar, flameUniforms, setGlow, engineColor } from './carmodel';
 import { Track, ROAD_WIDTH, CURB_WIDTH, WALL_OFFSET, textTexture } from './track';
 import { CarPhysics, CarInput } from './car';
-import { buildEnvironment } from './scenery';
-import { SkidMarks, Smoke, Rain, Shockwaves, Confetti } from './effects';
+import { buildEnvironment, hellUniforms, Environment } from './scenery';
+import { SkidMarks, Smoke, Shockwaves, Confetti } from './effects';
 import { AudioEngine } from './audio';
 import { Music } from './music';
 import { Input } from './input';
@@ -65,20 +65,22 @@ let world: THREE.Group | null = null;
 let dirLight!: THREE.DirectionalLight;
 let sunOffset = new THREE.Vector3();
 let skids!: SkidMarks, smoke!: Smoke, sparks!: Smoke, shock!: Shockwaves, confetti!: Confetti;
-let rain: Rain | null = null;
+let worldEnv: Environment | null = null;
 let showroom: Showroom | null = null;
 
 // ---------------- post-processing ----------------
 // Speed FX: radial motion blur scaled by speed, nitro speed lines + chromatic fringe, shockwave ripple, vignette.
 const SpeedShader = {
-  uniforms: { tDiffuse: { value: null }, uAmount: { value: 0 }, uNitro: { value: 0 }, uTime: { value: 0 }, uVignette: { value: 0.38 }, uShock: { value: 0 }, uSlow: { value: 0 } },
+  uniforms: { tDiffuse: { value: null }, uAmount: { value: 0 }, uNitro: { value: 0 }, uTime: { value: 0 }, uVignette: { value: 0.38 }, uShock: { value: 0 }, uSlow: { value: 0 }, uHeat: { value: 0 } },
   vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
-  fragmentShader: `uniform sampler2D tDiffuse; uniform float uAmount; uniform float uNitro; uniform float uTime; uniform float uVignette; uniform float uShock; uniform float uSlow; varying vec2 vUv;
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float uAmount; uniform float uNitro; uniform float uTime; uniform float uVignette; uniform float uShock; uniform float uSlow; uniform float uHeat; varying vec2 vUv;
     float h(float n){ return fract(sin(n)*43758.5453); }
     void main(){
       vec2 d = vUv - 0.5; float r = length(d);
       vec2 uv = vUv;
       if (uShock > 0.001) { float ring = (1.0 - uShock) * 0.9; float w = exp(-pow((r - ring) * 18.0, 2.0)); uv += normalize(d + 1e-5) * w * 0.035 * uShock; }
+      // heat haze: shimmering refraction rising off the lava, strongest low on screen
+      if (uHeat > 0.001) { float hz = uHeat * smoothstep(0.75, 0.15, vUv.y); uv += vec2(sin(vUv.y * 90.0 + uTime * 5.0) + sin(vUv.x * 37.0 - uTime * 3.3) * 0.5, cos(vUv.x * 70.0 + uTime * 4.0)) * 0.0011 * hz; }
       d = uv - 0.5;
       float blur = (uAmount + uNitro*0.8) * smoothstep(0.12, 0.7, r);
       vec3 c = vec3(0.0);
@@ -91,10 +93,11 @@ const SpeedShader = {
         float ang = atan(d.y, d.x);
         float seg = floor(ang * 60.0);
         float line = step(0.82, h(seg + floor(uTime * 18.0) * 7.0));
-        c += vec3(0.65, 0.85, 1.0) * smoothstep(0.28, 0.75, r) * line * uNitro * 0.55;
+        c += vec3(1.0, 0.42, 0.1) * smoothstep(0.28, 0.75, r) * line * uNitro * 0.65;
+        c = mix(c, c * vec3(1.25, 0.85, 0.7), uNitro * 0.5); // Soul Burn: hellfire grade
       }
       float l = dot(c, vec3(0.299, 0.587, 0.114));
-      c = mix(c, vec3(l) * vec3(0.85, 0.95, 1.15), uSlow * 0.55 * smoothstep(0.1, 0.6, r));
+      c = mix(c, vec3(l) * vec3(1.2, 0.75, 0.6), uSlow * 0.55 * smoothstep(0.1, 0.6, r));
       c *= 1.0 - (uVignette + uSlow * 0.3) * smoothstep(0.35, 0.85, r);
       gl_FragColor = vec4(c, 1.0);
     }`,
@@ -122,6 +125,7 @@ function setupPost() {
   }
   composer.addPass(new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), trackDef.night ? 0.45 : quality > 1 ? 0.5 : 0.4, 0.45, trackDef.night ? 1.6 : 1.4));
   speedPass = new ShaderPass(SpeedShader);
+  speedPass.uniforms.uHeat.value = trackDef.heat;
   composer.addPass(speedPass);
   composer.addPass(new OutputPass());
   if (flare) composer.addPass(new FXAAPass());
@@ -130,7 +134,7 @@ function setupPost() {
 // ---------------- world (per track) ----------------
 function disposeTree(o: THREE.Object3D) {
   const keep = new Set<THREE.Texture>();
-  for (const set of [assets.asphalt, assets.grass]) for (const t of Object.values(set)) if (t instanceof THREE.Texture) keep.add(t);
+  for (const set of [assets.asphalt]) for (const t of Object.values(set)) if (t instanceof THREE.Texture) keep.add(t);
   o.traverse(c => {
     const m = c as THREE.Mesh;
     m.geometry?.dispose();
@@ -147,22 +151,21 @@ function ensureWorld(id: string, onProgress?: (f: number) => void): Promise<void
   worldTask = worldTask.then(async () => {
     if (worldId === id) return;
     const def = trackById(id);
-    const hdri = await loadHdri(def.hdri, quality, onProgress);
+    onProgress?.(1);
     if (world) { scene.remove(world); disposeTree(world); }
     for (const r of racers) scene.remove(r.mesh);
     racers = []; ghost = null;
     world = new THREE.Group(); world.name = 'world'; scene.add(world);
     trackDef = def;
     track = new Track(def.control, def.scale, def.grip);
-    track.build(world, quality, assets, def.wet, def.neon);
-    const env = buildEnvironment(scene, world, renderer, track, quality, assets, def, hdri);
+    track.build(world, quality, assets, def.wet, def.night);
+    const env = buildEnvironment(scene, world, renderer, track, quality, assets, def); worldEnv = env;
     dirLight = env.dirLight; sunOffset = env.sunDir.clone().multiplyScalar(300);
     renderer.toneMappingExposure = def.exposure;
     skids = new SkidMarks(world, [600, 1500, 3000][quality]);
     smoke = new Smoke(world, [150, 400, 700][quality]);
     sparks = new Smoke(world, [120, 250, 400][quality], [1, 0.55, 0.15], true);
     Object.assign(sparks, { fade: 2.2, grow: -0.5, gravity: 14, drag: 0.6, baseSize: 0.45 });
-    rain = def.rain ? new Rain(world, [1100, 2000, 3200][quality]) : null;
     shock = new Shockwaves(world);
     confetti = new Confetti(world, [250, 450, 700][quality]);
     podium = null;
@@ -382,7 +385,7 @@ function nearMissTick(dt: number) {
   }
 }
 function fireShockwave() {
-  shock.spawn(player.phys.pos, 0x7ff6ff);
+  shock.spawn(player.phys.pos, 0xff4a10);
   if (speedPass) speedPass.uniforms.uShock.value = 1;
   audio.boom(0.6); shake = Math.min(1, shake + 0.5);
   let hit = 0;
@@ -810,7 +813,7 @@ function frame(ts?: number) {
   const dt = rdt * (state === 'race' || state === 'finishing' ? timeScale : 1);
 
   if (state === 'garage' && showroom) { showroom.render(renderer, rdt); fpsTick(rdt); input.endFrame(); return; }
-  flameUniforms.uTime.value += dt;
+  flameUniforms.uTime.value += dt; hellUniforms.uTime.value += dt;
   if (state === 'intro') {
     introT += dt;
     acc += dt; while (acc >= STEP) { simulate(STEP); acc -= STEP; }
@@ -863,7 +866,7 @@ function frame(ts?: number) {
   if (state === 'replay') syncMeshes(dt, false);
   else if (state !== 'paused' && state !== 'podium') syncMeshes(dt);
   if (state !== 'paused') { smoke.update(dt); sparks.update(dt); shock.update(dt); confetti.update(dt, time); }
-  if (rain) rain.update(dt, camera.position, camTarget ? camTarget.phys.velocity(tmpV) : tmpV.set(0, 0, 0));
+  worldEnv?.update(dt, time, camera.position);
   if (racers.length) {
     let ov: number | undefined;
     if (state === 'menu') ov = menuCam;

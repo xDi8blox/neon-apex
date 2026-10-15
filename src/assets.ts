@@ -1,11 +1,9 @@
 import * as THREE from 'three';
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
-import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader.js';
 
 /** Everything loaded from /public. See CREDITS.md for sources and licenses. */
 export interface Assets {
   asphalt: PBRSet;
-  grass: PBRSet;
 }
 export interface PBRSet { map: THREE.Texture; normalMap: THREE.Texture; roughnessMap: THREE.Texture; }
 
@@ -31,22 +29,8 @@ export async function loadAssets(renderer: THREE.WebGLRenderer, quality: number,
     map: await pbrTex(`${n}_color`, true), normalMap: await pbrTex(`${n}_normalgl`, false), roughnessMap: await pbrTex(`${n}_roughness`, false),
   });
   // textures are transcoded one at a time (keeps the Basis worker pool small and results unambiguous)
-  const textures = (async () => { const a = await set('asphalt'); const g = await set('grass'); return [a, g] as const; })();
-  const [asphalt, grass] = await textures;
+  const fonts = Promise.all(['50px "Pirata One"', '20px "Metal Mania"'].map(f => document.fonts.load(f).catch(() => []))); // banners are drawn with the gothic font
+  const [asphalt] = await Promise.all([set('asphalt'), fonts]);
   void quality;
-  return { asphalt, grass };
-}
-
-const hdriCache = new Map<string, Promise<THREE.DataTexture>>();
-/** Load (and cache) an equirect HDRI. Phones/Low get the 1k version. */
-export function loadHdri(name: string, quality: number, onProgress?: (f: number) => void): Promise<THREE.DataTexture> {
-  const key = `${name}_${quality > 1 ? '2k' : '1k'}`;
-  let p = hdriCache.get(key);
-  if (!p) {
-    p = new HDRLoader().loadAsync(`${BASE}hdri/${key}.hdr`, e => { if (e.total) onProgress?.(e.loaded / e.total); }).then(t => {
-      t.mapping = THREE.EquirectangularReflectionMapping; return t;
-    });
-    hdriCache.set(key, p);
-  }
-  return p;
+  return { asphalt };
 }

@@ -80,36 +80,7 @@ export class Smoke {
   }
 }
 
-/** Rain streaks: line segments recycled in a box that follows the camera. */
-export class Rain {
-  private geo = new THREE.BufferGeometry();
-  private pos: Float32Array; private n: number;
-  readonly mesh: THREE.LineSegments;
-  constructor(parent: THREE.Object3D, count: number) {
-    this.n = count; this.pos = new Float32Array(count * 6);
-    for (let i = 0; i < count; i++) this.reset(i, new THREE.Vector3(), true);
-    this.geo.setAttribute('position', new THREE.BufferAttribute(this.pos, 3));
-    this.mesh = new THREE.LineSegments(this.geo, new THREE.LineBasicMaterial({ color: 0xd0dcea, transparent: true, opacity: 0.6, depthWrite: false }));
-    this.mesh.frustumCulled = false; parent.add(this.mesh);
-  }
-  private reset(i: number, c: THREE.Vector3, anyY: boolean) {
-    const x = c.x + (Math.random() - 0.5) * 70, z = c.z + (Math.random() - 0.5) * 70, y = c.y + (anyY ? Math.random() * 40 - 8 : 30 + Math.random() * 6);
-    this.pos.set([x, y, z, x + 0.15, y + 1.4, z + 0.05], i * 6);
-  }
-  update(dt: number, cam: THREE.Vector3, vel: THREE.Vector3) {
-    const dy = 34 * dt, dx = 5 * dt;
-    for (let i = 0; i < this.n; i++) {
-      const k = i * 6;
-      this.pos[k] -= dx; this.pos[k + 3] -= dx; this.pos[k + 1] -= dy; this.pos[k + 4] -= dy;
-      // tilt streaks against the camera's motion for a sense of speed
-      this.pos[k + 3] = this.pos[k] - vel.x * 0.02 + 0.15; this.pos[k + 5] = this.pos[k + 2] - vel.z * 0.02 + 0.05;
-      if (this.pos[k + 1] < cam.y - 10 || Math.abs(this.pos[k] - cam.x) > 40 || Math.abs(this.pos[k + 2] - cam.z) > 40) this.reset(i, cam, false);
-    }
-    (this.geo.attributes.position as THREE.BufferAttribute).needsUpdate = true;
-  }
-}
-
-/** Expanding neon ring used for the nitro shockwave. */
+/** Expanding hellfire ring used for the Soul Burn blast. */
 export class Shockwaves {
   private items: { mesh: THREE.Mesh; t: number }[] = [];
   private geo = new THREE.RingGeometry(0.93, 1, 64).rotateX(-Math.PI / 2);
@@ -138,7 +109,7 @@ export class Confetti {
     this.mesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.16, 0.26), new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, toneMapped: false }), n);
     this.mesh.count = 0; this.mesh.frustumCulled = false; parent.add(this.mesh);
     this.p = new Float32Array(n * 3); this.v = new Float32Array(n * 3); this.r = new Float32Array(n * 3);
-    const c = new THREE.Color(); const pal = [0xff2d75, 0x00e5ff, 0xffc21a, 0x22d36a, 0xffffff, 0xa24bff];
+    const c = new THREE.Color(); const pal = [0xff4a10, 0xffb02e, 0xc3101a, 0x1a0a08, 0xffe0a0, 0x7a0805]; // embers, ash and blood
     for (let i = 0; i < n; i++) this.mesh.setColorAt(i, c.set(pal[i % pal.length]));
   }
   burst(at: THREE.Vector3) {

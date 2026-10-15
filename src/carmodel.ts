@@ -95,7 +95,7 @@ function profile(pts: [number, number][], width: number, bevel: number, curveSeg
   return g;
 }
 /** Tapered, curved horn: a tube along a Catmull-Rom path whose radius shrinks to a point. */
-function horn(path: THREE.Vector3[], r0: number, seg: number, radial = 8, power = 1.2): THREE.BufferGeometry {
+export function horn(path: THREE.Vector3[], r0: number, seg: number, radial = 8, power = 1.2): THREE.BufferGeometry {
   const curve = new THREE.CatmullRomCurve3(path);
   const g = new THREE.TubeGeometry(curve, seg, r0, radial, false);
   const pos = g.getAttribute('position'), c = new THREE.Vector3(), v = new THREE.Vector3();
