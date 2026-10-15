@@ -17,7 +17,7 @@ export const WALL_OFFSET = ROAD_WIDTH / 2 + 7; // barrier distance from centerli
 
 // Control points of a closed circuit (x, z). Hand designed: long straight,
 // hairpin, esses, sweeper and a fast final corner.
-const CONTROL: [number, number][] = [
+export const CONTROL: [number, number][] = [
   [0, 0], [0, -120], [10, -220], [60, -280], [140, -290], [190, -250],
   [180, -190], [130, -160], [120, -110], [170, -70], [250, -80], [320, -40],
   [340, 40], [300, 110], [220, 130], [160, 170], [150, 240], [90, 290],
@@ -30,9 +30,9 @@ export class Track {
   length: number;
   readonly N = 1600;
 
-  constructor() {
+  constructor(control: [number, number][] = CONTROL, scale = 1.4, public grip = 1) {
     this.curve = new THREE.CatmullRomCurve3(
-      CONTROL.map(([x, z]) => new THREE.Vector3(x * 1.4, 0, z * 1.4)), true, 'centripetal');
+      control.map(([x, z]) => new THREE.Vector3(x * scale, 0, z * scale)), true, 'centripetal');
     this.length = this.curve.getLength();
     const up = new THREE.Vector3(0, 1, 0);
     for (let i = 0; i < this.N; i++) {
@@ -59,7 +59,7 @@ export class Track {
     let off = k.map(c => THREE.MathUtils.clamp(c * 900, -1, 1) * half);
     off = smooth(off, 40);
     // target speed from lookahead curvature: v = sqrt(mu*g/|k|), then backward pass for braking
-    const mu = 1.38 * 9.81;
+    const mu = 1.38 * 9.81 * grip;
     const v = k.map(c => Math.min(78, Math.sqrt(mu / Math.max(Math.abs(c), 1e-4))));
     const decel = 11; // m/s^2 braking capability
     for (let pass = 0; pass < 2; pass++)

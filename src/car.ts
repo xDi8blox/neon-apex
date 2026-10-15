@@ -21,6 +21,8 @@ export class CarPhysics {
   nitro = 0.6;            // boost tank 0..1
   boosting = false;
   nitroForce = 6500;
+  nitroRegen = 1;          // multiplier on drift refill
+  offroadGrip = 0.7;
 
   // params
   mass = 1250; inertia = 1700;
@@ -33,7 +35,8 @@ export class CarPhysics {
   maxSteer = 0.55;
   gearRatios = [0, 3.4, 2.3, 1.7, 1.32, 1.08, 0.9];
   power = 1;                   // AI skill multiplier
-  stability = 0.6;             // traction/stability assist (0 = off). Disabled while handbraking.
+  stability = 0.6;
+  surfaceGrip = 1;             // track/weather grip multiplier
 
   get speed() { return Math.hypot(this.vf, this.vl); }
   forward(out = new THREE.Vector3()) { return out.set(Math.sin(this.heading), 0, -Math.cos(this.heading)); }
@@ -80,7 +83,7 @@ export class CarPhysics {
     this.boosting = !!inp.nitro && this.nitro > 0.01 && this.vf > 3 && !reversing;
     let boostF = 0;
     if (this.boosting) { boostF = this.nitroForce * this.power; this.nitro = Math.max(0, this.nitro - dt * 0.3); }
-    else this.nitro = Math.min(1, this.nitro + dt * (0.035 + (this.slipRear > 0.12 && speed > 12 ? 0.22 : 0)));
+    else this.nitro = Math.min(1, this.nitro + dt * (0.035 + (this.slipRear > 0.12 && speed > 12 ? 0.22 * this.nitroRegen : 0)));
     let Fx = drive + boostF - brakeF;
     this.rpm += (Math.min(rpm + inp.throttle * 600, 8400) - this.rpm) * Math.min(1, dt * 10);
 
@@ -98,7 +101,7 @@ export class CarPhysics {
     const vx = Math.max(Math.abs(this.vf), 2) * Math.sign(this.vf || 1);
     const slipF = Math.atan2(this.vl + this.a * this.yawRate, Math.abs(vx)) - delta * Math.sign(vx);
     const slipR = Math.atan2(this.vl - this.b * this.yawRate, Math.abs(vx));
-    const muSurf = this.mu * (this.offroad ? 0.7 : 1);
+    const muSurf = this.mu * (this.offroad ? this.offroadGrip : 1) * this.surfaceGrip;
     const rearMu = muSurf * (inp.handbrake ? 0.38 : 1);
     // rear grip also reduced by throttle (combined slip, simple friction circle)
     // friction circle: RWD drive + 35% of braking on the rear, 65% of braking on the front
