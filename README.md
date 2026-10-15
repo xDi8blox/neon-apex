@@ -1,49 +1,47 @@
 # NEON APEX
 
-**A golden-hour circuit racer that runs entirely in the browser.** Three.js rendering with real-time shadows, bloom and speed blur, a hand-rolled tire-model vehicle simulation, AI opponents that follow a computed racing line, and a fully procedural soundtrack of engine and tires. No backend, no downloaded assets: every texture, mesh and sound is generated at runtime.
+**A golden-hour street circuit racer that runs entirely in the browser.** Physically based rendering lights a licensed glTF supercar with an HDRI and fills the circuit with CC0 PBR surfaces. The full post stack includes ambient occlusion, bloom, speed blur, lens flare and optional screen-space reflections on a wet road. Under it sits a hand-written tire-model physics sim, AI rivals that follow a computed racing line, a nitro system and procedural audio. There is no backend.
 
 ![Mid-race gameplay](screenshots/gameplay.png)
 
-| Main menu (attract mode) | Race start |
+| Main menu (attract mode) | Cinematic intro flyby |
 |---|---|
-| ![Menu](screenshots/menu.png) | ![Start](screenshots/race-start.png) |
-| **TV trackside camera** | **Results** |
-| ![TV camera](screenshots/tv-camera.png) | ![Results](screenshots/results.png) |
+| ![Menu](screenshots/menu.png) | ![Intro](screenshots/intro.png) |
+| **Race start** | **Nitro boost** |
+| ![Start](screenshots/race-start.png) | ![Nitro](screenshots/nitro.png) |
+| **TV trackside camera** | **Wet road (SSR)** |
+| ![TV camera](screenshots/tv-camera.png) | ![Wet](screenshots/wet-gameplay.png) |
 
-<sub>Screenshots are captured automatically in headless Chromium using SwiftShader (software GL) via `scripts/screenshots.mjs`.</sub>
+<sub>Screenshots come from headless Chromium on SwiftShader (software GL) at the High preset, captured by `scripts/screenshots.mjs`. A real GPU looks the same and runs far faster.</sub>
 
 ## Features
 
+**Visuals**
+- **Licensed glTF car** (Ferrari 458 Italia, CC BY 4.0; see [CREDITS.md](CREDITS.md)). Your car loads the full ~350k-triangle Draco model. AI cars use a meshopt-compressed LOD at about 15% of the triangles, with creased normals rebuilt at load time.
+- **Car materials**: `MeshPhysicalMaterial` paint with clearcoat and a procedural **metallic-flake** normal map, chrome, tinted glass, carbon fiber, and emissive head-, tail- and **brake lights** that feed bloom. Each car has a baked contact-shadow (AO) plane.
+- **HDRI lighting**: Poly Haven *Venice Sunset* (CC0) is used for the background and, through PMREM, for image-based lighting and reflections. The sun's direction is detected from the brightest texel of the HDRI, so shadows line up with the sky.
+- **PBR surfaces**: ambientCG asphalt and grass (CC0, color + normal + roughness) shipped as **KTX2 / Basis Universal** with JPG fallback. Lane markings are a separate decal layer, curbs are painted, and there is asphalt run-off.
+- **Wet road option**: a glossy, darker asphalt that reflects the HDRI. On High it adds an **SSR pass** (screen-space reflections) restricted to the road surface.
+- **Post stack**: ACES filmic tone mapping, **GTAO** ambient occlusion (High), MSAA render targets, Unreal bloom, **speed-scaled radial motion blur** and vignette, **lens flare with an anamorphic streak** on the sun.
+- **Nitro FX**: twin exhaust flames (additive animated shader), radial speed lines, chromatic fringe, extra FOV kick and a whoosh/roar sound.
+- **Cinematic intro**: a letterboxed crane-and-sweep flyby over the grid before the lights. Skip it with Enter.
+- **Scenery**: instanced broadleaf and conifer trees, reflective glass towers with lit windows, street lamps, tire stacks on the outside of tight corners, emissive sponsor billboards, a grandstand with crowd, and a start/finish gantry.
+- **Quality tiers** (Low / Medium / High) control pixel ratio, MSAA, shadow resolution, GTAO/SSR, bloom, lens flare, HDRI resolution, car detail, scenery density and particle budgets.
+
 **Driving model** (`src/car.ts`)
-- Bicycle-model vehicle dynamics at a fixed 120 Hz step: slip angles, saturating lateral tire forces, longitudinal load transfer, and a friction circle (throttle and brakes eat into cornering grip)
-- Rear-wheel drive, 6-speed automatic gearbox with a torque curve and rev limiter; RPM drives the audio
-- Speed-sensitive, rate-limited steering; handbrake drops rear grip for drifts and handbrake turns
-- Adjustable stability assist (lighter for the player, so slides stay catchable)
-- Aero drag, rolling resistance, grass that slows you and costs grip
-- Barrier collisions with restitution, scraping and camera shake; car-to-car collisions using two circles per car with off-center yaw impulses
-
-**Track & world** (`src/track.ts`, `src/scenery.ts`)
-- Closed ~2.4 km Catmull-Rom circuit: long straight, hairpin, esses, sweepers
-- Road ribbon with lane markings, red/white curbs, run-off, continuous barriers, start/finish gantry, grandstand with crowd
-- Instanced trees, a city skyline with lit windows, street lamps along the whole lap
-- Preetham physical sky, with a PMREM environment map built from the same sky so car paint reflects it; fog and a directional sun whose shadow frustum follows the player
-
-**Rendering & effects**
-- PCF shadow maps, ACES tone mapping, Unreal bloom (lamps, head- and brake lights)
-- Custom radial speed-blur and vignette pass, FOV kick that scales with speed, high-speed camera vibration
-- Skid marks (instanced ring buffer) and soft tire-smoke particles (custom point shader)
-- **Graphics quality setting** (Low / Medium / High): pixel ratio, MSAA, shadows, bloom, scenery density, particle budgets
+- Bicycle-model vehicle dynamics at a fixed 120 Hz step: slip angles, saturating lateral tire forces, longitudinal load transfer and a friction circle
+- Rear-wheel drive, a 6-speed auto gearbox with torque curve and limiter, speed-sensitive rate-limited steering, and a handbrake for drifts
+- **Nitro**: a separate thrust that bypasses traction. The tank refills slowly over time and faster while drifting, and AI cars use it on straights
+- Stability assist, grass penalty, and barrier and car-to-car collisions
 
 **Racing**
-- 0–7 AI opponents across three difficulties. The racing line is computed from track curvature, and target speeds come from a grip limit (`v = √(μg/κ)`) plus a backward braking pass. AI cars avoid each other by changing lanes and get mild rubber-banding
-- F1-style 5-light countdown, lap timing, lap counter, live race position, results table
-- **Best lap saved in `localStorage`**
-- HUD: canvas speedometer with RPM arc and gear, minimap with every car, current/last/best lap times, FPS
-- Cameras: **Chase** (spring-damped, follows the drift angle), **Bumper**, **TV** trackside cams with auto-zoom, **Orbit**
-- Pause menu (resume / restart / sound / quit), auto-pause when the tab is hidden
-- Attract mode: AI cars race behind the main menu
+- 0–7 AI rivals on three difficulties: a curvature-based racing line, grip-limited target speeds with a braking pass, lane-change avoidance, mild rubber-banding
+- 5-light countdown, lap timing and count, live positions, results table, **best lap saved in `localStorage`**
+- HUD: speedometer with RPM arc and gear, **nitro meter**, minimap, lap times, FPS
+- Cameras: Chase, Bumper, TV trackside (auto-zoom), Orbit
+- Pause menu, auto-pause on tab hide, attract mode behind the menu
 
-**Audio** (`src/audio.ts`): 100% procedural Web Audio. The engine is three oscillators through a resonant low-pass, with pitch following RPM and timbre opening up with throttle. Tire screech is band-passed noise driven by slip. Impacts and countdown beeps are synthesized too. Mute toggle is saved between sessions. No audio files are used, so there is nothing to attribute.
+**Audio**: fully procedural Web Audio (engine with RPM pitch, tire screech, nitro roar and whoosh, impacts, beeps) with a mute toggle. No audio files are used.
 
 ## Controls
 
@@ -53,6 +51,8 @@
 | Brake / reverse | `S` / `↓` | LT |
 | Steer | `A` `D` / `←` `→` | Left stick |
 | Handbrake | `Space` | A / B |
+| Nitro | `Shift` / `N` | X / RB |
+| Skip intro | `Enter` / `Esc` | Start |
 | Change camera | `C` | Y |
 | Pause | `Esc` / `P` | Start |
 | Mute | `M` | – |
@@ -70,11 +70,11 @@ Other scripts:
 ```bash
 npm run build      # type-check (tsc) + production build into dist/
 npm run preview    # serve the production build
-npm run test:sim   # headless physics/AI regression: laps the circuit at 4 AI skill levels
+npm run test:sim   # headless physics/AI regression: 3 laps at 5 AI skill/nitro configs; fails on any barrier contact
 npm run screenshots  # needs `npx playwright install chromium` and a running preview on :4173
 ```
 
-Handy URL flags: `?quality=0|1|2` forces a graphics preset, and `?autopilot=1` lets the AI drive your car (used for screenshots).
+Handy URL flags: `?quality=0|1|2` forces a graphics preset, `?wet=1` turns on the wet road, `?gtao=0` disables ambient occlusion, and `?autopilot=1` lets the AI drive your car (used for screenshots).
 
 ## Deploying to GitHub Pages
 
@@ -84,6 +84,9 @@ Handy URL flags: `?quality=0|1|2` forces a graphics preset, and `?autopilot=1` l
 
 - [Three.js](https://threejs.org/) r186: rendering, post-processing (`EffectComposer`, `UnrealBloomPass`, custom `ShaderPass`), `Sky`
 - TypeScript (strict) + [Vite](https://vitejs.dev/)
+- Loaders: `GLTFLoader` + `DRACOLoader` + meshopt decoder, `KTX2Loader` (Basis Universal), `HDRLoader`
+- Post: `GTAOPass`, `SSRPass`, `UnrealBloomPass`, `Lensflare`, custom speed/nitro `ShaderPass`, `OutputPass`
+- Asset pipeline: glTF-Transform + meshoptimizer for the LOD, Basis Universal `basisu` for KTX2
 - Custom vehicle physics (no physics engine dependency: the planar tire model is both lighter and more tunable than a rigid-body engine for this game)
 - Web Audio API, Canvas 2D (HUD and procedural textures), Gamepad API
 - Playwright for automated screenshots
@@ -93,9 +96,11 @@ Handy URL flags: `?quality=0|1|2` forces a graphics preset, and `?autopilot=1` l
 ```
 src/
   main.ts      game loop, state machine, AI controller, collisions, cameras, post-FX
-  car.ts       vehicle dynamics + procedural car mesh
+  assets.ts    asset loading (Draco/meshopt glTF, KTX2, HDR) with progress
+  carmodel.ts  car materials (flake paint, chrome, glass, lights), LOD, nitro flames
+  car.ts       vehicle dynamics + nitro
   track.ts     circuit spline, racing line, target speeds, road/curb/barrier geometry
-  scenery.ts   sky, lighting, environment map, instanced scenery
+  scenery.ts   HDRI lighting, sun + lens flare, PBR ground, instanced scenery
   effects.ts   skid marks and tire smoke
   audio.ts     procedural engine/tire/impact audio
   input.ts     keyboard + gamepad
@@ -105,6 +110,10 @@ scripts/
   sim-test.ts      headless AI lap regression
 ```
 
+## Credits
+
+Third-party assets and their licenses are listed in [CREDITS.md](CREDITS.md). The car model is **CC BY 4.0, by vicent091036**. The HDRI (Poly Haven) and PBR textures (ambientCG) are CC0.
+
 ## License
 
-[MIT](LICENSE) © 2026 Death
+Code: [MIT](LICENSE) © 2026 Death. Bundled assets keep their own licenses (see CREDITS.md).
