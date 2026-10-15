@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-export interface CarInput { throttle: number; brake: number; steer: number; handbrake: boolean; }
+export interface CarInput { throttle: number; brake: number; steer: number; handbrake: boolean; nitro?: boolean; }
 
 /**
  * Planar vehicle dynamics: a bicycle model with saturating tire forces,
@@ -18,6 +18,9 @@ export class CarPhysics {
   rpm = 1000; gear = 1;
   slipFront = 0; slipRear = 0; wheelspin = 0;
   offroad = false;
+  nitro = 0.6;            // boost tank 0..1
+  boosting = false;
+  nitroForce = 6500;
 
   // params
   mass = 1250; inertia = 1700;
@@ -72,8 +75,13 @@ export class CarPhysics {
       drive = inp.throttle * this.engineForce * this.power * torqueCurve * (this.gearRatios[this.gear] / 1.7) * 0.55;
       if (this.vf > 0.5) brakeF = inp.brake * this.brakeForce;
     }
-    if (rpm > 8200) drive = Math.min(drive, 0); // limiter
-    let Fx = drive - brakeF;
+    if (rpm > 8200 && !(inp.nitro && this.nitro > 0)) drive = Math.min(drive, 0); // limiter
+    // nitro: extra thrust while the tank lasts; refills slowly, faster while drifting
+    this.boosting = !!inp.nitro && this.nitro > 0.01 && this.vf > 3 && !reversing;
+    let boostF = 0;
+    if (this.boosting) { boostF = this.nitroForce * this.power; this.nitro = Math.max(0, this.nitro - dt * 0.3); }
+    else this.nitro = Math.min(1, this.nitro + dt * (0.035 + (this.slipRear > 0.12 && speed > 12 ? 0.22 : 0)));
+    let Fx = drive + boostF - brakeF;
     this.rpm += (Math.min(rpm + inp.throttle * 600, 8400) - this.rpm) * Math.min(1, dt * 10);
 
     // resistances
@@ -129,49 +137,3 @@ export class CarPhysics {
   }
 }
 
-/** Procedural low-poly sports car mesh. */
-export function buildCarMesh(color: number, quality: number): { group: THREE.Group; wheels: THREE.Object3D[]; brakeMat: THREE.MeshStandardMaterial } {
-  const group = new THREE.Group();
-  const paint = new THREE.MeshPhysicalMaterial({ color, metalness: 0.6, roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.08 });
-  const dark = new THREE.MeshStandardMaterial({ color: 0x0c0d10, roughness: 0.6, metalness: 0.3 });
-  const glass = new THREE.MeshPhysicalMaterial({ color: 0x0a1420, metalness: 0.9, roughness: 0.05, transparent: true, opacity: 0.85 });
-  const headMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xdff4ff, emissiveIntensity: 3 });
-  const brakeMat = new THREE.MeshStandardMaterial({ color: 0x330000, emissive: 0xff1020, emissiveIntensity: 1.2 });
-
-  // lower body: extruded side profile
-  const shape = new THREE.Shape();
-  shape.moveTo(-2.25, 0.25); shape.lineTo(2.2, 0.25); shape.lineTo(2.3, 0.6);
-  shape.lineTo(1.2, 0.85); shape.lineTo(-1.9, 0.92); shape.lineTo(-2.3, 0.75); shape.closePath();
-  const body = new THREE.ExtrudeGeometry(shape, { depth: 1.9, bevelEnabled: true, bevelSize: 0.08, bevelThickness: 0.08, bevelSegments: 2 });
-  body.translate(0, 0, -0.95); body.rotateY(Math.PI / 2); // length along -Z
-  const bodyMesh = new THREE.Mesh(body, paint); group.add(bodyMesh);
-  // cabin
-  const cs = new THREE.Shape();
-  cs.moveTo(-1.2, 0.85); cs.lineTo(0.9, 0.86); cs.lineTo(0.15, 1.32); cs.lineTo(-0.9, 1.3); cs.lineTo(-1.5, 0.9); cs.closePath();
-  const cab = new THREE.ExtrudeGeometry(cs, { depth: 1.5, bevelEnabled: true, bevelSize: 0.05, bevelThickness: 0.05, bevelSegments: 1 });
-  cab.translate(0, 0, -0.75); cab.rotateY(Math.PI / 2);
-  group.add(new THREE.Mesh(cab, glass));
-  // spoiler
-  const wing = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.06, 0.4), dark); wing.position.set(0, 1.18, 2.0); group.add(wing);
-  for (const x of [-0.6, 0.6]) { const st = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.3, 0.2), dark); st.position.set(x, 1.02, 2.0); group.add(st); }
-  // splitter / diffuser
-  const split = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.06, 0.5), dark); split.position.set(0, 0.24, -2.25); group.add(split);
-  // lights
-  for (const x of [-0.7, 0.7]) {
-    const hl = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.1, 0.05), headMat); hl.position.set(x, 0.58, -2.33); group.add(hl);
-    const tl = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.1, 0.05), brakeMat); tl.position.set(x, 0.7, 2.33); group.add(tl);
-  }
-  // wheels
-  const wheels: THREE.Object3D[] = [];
-  const tire = new THREE.CylinderGeometry(0.36, 0.36, 0.32, quality > 1 ? 24 : 14); tire.rotateZ(Math.PI / 2);
-  const rim = new THREE.CylinderGeometry(0.24, 0.24, 0.34, 10); rim.rotateZ(Math.PI / 2);
-  const rimMat = new THREE.MeshStandardMaterial({ color: 0xb8bcc4, metalness: 1, roughness: 0.25 });
-  for (const [x, z] of [[-0.93, -1.3], [0.93, -1.3], [-0.93, 1.38], [0.93, 1.38]]) {
-    const pivot = new THREE.Group(); pivot.position.set(x, 0.36, z);
-    const spin = new THREE.Group();
-    spin.add(new THREE.Mesh(tire, dark)); spin.add(new THREE.Mesh(rim, rimMat));
-    pivot.add(spin); group.add(pivot); wheels.push(pivot);
-  }
-  group.traverse(o => { if ((o as THREE.Mesh).isMesh) { o.castShadow = quality > 0; o.receiveShadow = false; } });
-  return { group, wheels, brakeMat };
-}
