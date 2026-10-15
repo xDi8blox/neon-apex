@@ -14,6 +14,9 @@
 | **TV trackside camera** | **Wet road (SSR)** |
 | ![TV camera](screenshots/tv-camera.png) | ![Wet](screenshots/wet-gameplay.png) |
 
+| **Mobile (iPhone landscape, touch controls)** | |
+| ![Mobile](screenshots/mobile.png) | |
+
 <sub>Screenshots come from headless Chromium on SwiftShader (software GL) at the High preset, captured by `scripts/screenshots.mjs`. A real GPU looks the same and runs far faster.</sub>
 
 ## Features
@@ -35,6 +38,14 @@
 - Rear-wheel drive, a 6-speed auto gearbox with torque curve and limiter, speed-sensitive rate-limited steering, and a handbrake for drifts
 - **Nitro**: a separate thrust that bypasses traction. The tank refills slowly over time and faster while drifting, and AI cars use it on straights
 - Stability assist, grass penalty, and barrier and car-to-car collisions
+
+**Mobile**
+- On-screen touch controls that only appear on touch devices: steer ◀ ▶, GAS, BRAKE, DRIFT, N₂O (multi-touch), plus pause, camera, fullscreen (with landscape lock where supported)
+- Optional **tilt-to-steer** via DeviceOrientation, including the iOS permission request
+- A landscape layout with a "rotate your phone" prompt in portrait, and a compact responsive HUD and menus
+- Page scroll, pinch and double-tap zoom, and long-press menus are blocked
+- Phones auto-pick the **Low / Mobile** preset: reduced pixel ratio, no post-processing/SSAO/SSR, LOD cars, 1k HDRI, lighter scenery, 3 rivals
+- `npm run test:mobile` runs a Playwright iPhone-landscape emulation that taps the controls and checks the car responds
 
 **Racing**
 - 0–7 AI rivals on three difficulties: a curvature-based racing line, grip-limited target speeds with a braking pass, lane-change avoidance, mild rubber-banding
@@ -58,6 +69,8 @@
 | Change camera | `C` | Y |
 | Pause | `Esc` / `P` | Start |
 | Mute | `M` | – |
+
+On phones and tablets, use the on-screen buttons. TILT toggles steering by rolling the device.
 
 ## Running locally
 

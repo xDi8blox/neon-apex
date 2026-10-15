@@ -101,5 +101,5 @@ body.tilt .tb.steer { opacity: .35; }
 }
 /* on touch, move speedo/nitro/cam label above the pedals */
 body.touch #speedo { right: 50%; transform: translateX(50%); bottom: 0; width: 130px; height: 130px; }
-body.touch #nitro { right: 50%; transform: translateX(50%); bottom: 128px; width: 140px; }
+body.touch #nitro { right: 50%; transform: translateX(50%); bottom: auto; top: 54px; width: 160px; text-align: center; }
 body.touch #h-cam { display: none; }

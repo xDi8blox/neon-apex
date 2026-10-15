@@ -16,7 +16,7 @@ export class TouchControls {
     const root = document.getElementById('touch')!;
     root.querySelectorAll<HTMLElement>('[data-hold]').forEach(el => {
       const key = el.dataset.hold!;
-      const down = (e: PointerEvent) => { e.preventDefault(); el.setPointerCapture?.(e.pointerId); el.classList.add('on'); this.held.set(key, (this.held.get(key) ?? 0) + 1); this.sync(); };
+      const down = (e: PointerEvent) => { e.preventDefault(); try { el.setPointerCapture?.(e.pointerId); } catch { /* synthetic or already released */ } el.classList.add('on'); this.held.set(key, (this.held.get(key) ?? 0) + 1); this.sync(); };
       const up = (e: PointerEvent) => { e.preventDefault(); el.classList.remove('on'); this.held.set(key, Math.max(0, (this.held.get(key) ?? 1) - 1)); this.sync(); };
       el.addEventListener('pointerdown', down);
       el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up); el.addEventListener('lostpointercapture', up);
