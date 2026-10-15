@@ -89,12 +89,12 @@ export class Rain {
     this.n = count; this.pos = new Float32Array(count * 6);
     for (let i = 0; i < count; i++) this.reset(i, new THREE.Vector3(), true);
     this.geo.setAttribute('position', new THREE.BufferAttribute(this.pos, 3));
-    this.mesh = new THREE.LineSegments(this.geo, new THREE.LineBasicMaterial({ color: 0xaab8c8, transparent: true, opacity: 0.38, depthWrite: false }));
+    this.mesh = new THREE.LineSegments(this.geo, new THREE.LineBasicMaterial({ color: 0xd0dcea, transparent: true, opacity: 0.6, depthWrite: false }));
     this.mesh.frustumCulled = false; parent.add(this.mesh);
   }
   private reset(i: number, c: THREE.Vector3, anyY: boolean) {
     const x = c.x + (Math.random() - 0.5) * 70, z = c.z + (Math.random() - 0.5) * 70, y = c.y + (anyY ? Math.random() * 40 - 8 : 30 + Math.random() * 6);
-    this.pos.set([x, y, z, x + 0.15, y + 0.9, z + 0.05], i * 6);
+    this.pos.set([x, y, z, x + 0.15, y + 1.4, z + 0.05], i * 6);
   }
   update(dt: number, cam: THREE.Vector3, vel: THREE.Vector3) {
     const dy = 34 * dt, dx = 5 * dt;
@@ -112,7 +112,7 @@ export class Rain {
 /** Expanding neon ring used for the nitro shockwave. */
 export class Shockwaves {
   private items: { mesh: THREE.Mesh; t: number }[] = [];
-  private geo = new THREE.RingGeometry(0.85, 1, 64).rotateX(-Math.PI / 2);
+  private geo = new THREE.RingGeometry(0.93, 1, 64).rotateX(-Math.PI / 2);
   constructor(private parent: THREE.Object3D) {}
   spawn(p: THREE.Vector3, color = 0x7ff6ff) {
     const mesh = new THREE.Mesh(this.geo, new THREE.MeshBasicMaterial({ color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, side: THREE.DoubleSide }));
@@ -122,7 +122,7 @@ export class Shockwaves {
     for (const it of this.items) {
       it.t += dt; const k = it.t / 0.7;
       it.mesh.scale.setScalar(1 + k * 22);
-      (it.mesh.material as THREE.MeshBasicMaterial).opacity = Math.max(0, 1 - k) * 2;
+      (it.mesh.material as THREE.MeshBasicMaterial).opacity = Math.pow(Math.max(0, 1 - k), 1.5) * 0.9;
       if (k >= 1) { this.parent.remove(it.mesh); (it.mesh.material as THREE.Material).dispose(); }
     }
     this.items = this.items.filter(i => i.t < 0.7);

@@ -20,13 +20,17 @@
       <div class="row"><span class="lbl">LAST</span> <span id="h-last">--</span></div>
       <div class="row"><span class="lbl">BEST</span> <span id="h-best">--</span></div>
     </div>
+    <div id="h-scorebox"><span class="lbl">SCORE</span><b id="h-score">0</b><div id="h-delta"></div></div>
     <canvas id="minimap" width="220" height="220"></canvas>
     <canvas id="speedo" width="260" height="260"></canvas>
     <div id="h-cam" class="panel small">CAM: CHASE</div>
     <div id="nitro"><span>NITRO</span><div class="bar"><div id="nitro-fill"></div></div></div>
+    <div id="combo"></div>
+    <div id="popups"></div>
     <div id="h-msg"></div>
     <div id="lights"><i></i><i></i><i></i><i></i><i></i></div>
   </div>
+  <div id="replay-badge" class="hidden"><i></i>REPLAY <em>tap / ENTER to skip</em></div>
 
   <div id="touch">
     <div class="t-top"><button id="t-pause" data-tap="Escape">II</button><button id="t-cam" data-tap="KeyC">CAM</button><button id="t-tilt">TILT OFF</button><button id="t-fs">⛶</button></div>
@@ -37,21 +41,98 @@
     </div>
   </div>
   <div id="rotate"><div>⟳</div><p>Rotate your phone to landscape</p></div>
-  <div id="letterbox"><div class="top"></div><div class="bot"><span>NEON APEX · VENICE SUNSET CIRCUIT</span><em>ENTER / TAP to skip</em></div></div>
-  <div id="menu" class="screen">
-    <div class="card">
-      <h1>NEON<span>APEX</span></h1>
-      <p class="tag">Golden-hour circuit racing in your browser.</p>
-      <div class="opts">
-        <label>Laps <select id="opt-laps"><option>1</option><option>2</option><option selected>3</option><option>5</option></select></label>
-        <label>Opponents <select id="opt-ai"><option>0</option><option>3</option><option selected>5</option><option>7</option></select></label>
-        <label>Difficulty <select id="opt-diff"><option value="0.88">Easy</option><option value="0.95" selected>Medium</option><option value="1.0">Hard</option></select></label>
-        <label>Road <select id="opt-wet"><option value="0">Dry</option><option value="1">Wet</option></select></label>
-        <label>Graphics <select id="opt-quality"><option value="0">Low / Mobile</option><option value="1">Medium</option><option value="2">High</option></select></label>
+  <div id="letterbox"><div class="top"></div><div class="bot"><span id="lb-title">NEON APEX</span><em>ENTER / TAP to skip</em></div></div>
+  <div id="wipe"></div>
+
+  <div id="loading">
+    <div class="ld-inner">
+      <h1 class="logo">NEON<span>APEX</span></h1>
+      <svg class="ld-car" viewBox="0 0 200 80" aria-hidden="true">
+        <path d="M14 56 L24 40 L70 32 L96 18 L140 18 L168 34 L188 40 L192 56 Z" fill="none" stroke="#ff2d75" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M78 32 L100 22 L136 22 L156 34 Z" fill="rgba(0,229,255,.25)" stroke="#00e5ff" stroke-width="2"/>
+        <g class="whl" style="transform-origin:52px 58px"><circle cx="52" cy="58" r="13" fill="#05080f" stroke="#7ff6ff" stroke-width="3"/><path d="M52 46 V70 M40 58 H64" stroke="#7ff6ff" stroke-width="2"/></g>
+        <g class="whl" style="transform-origin:154px 58px"><circle cx="154" cy="58" r="13" fill="#05080f" stroke="#7ff6ff" stroke-width="3"/><path d="M154 46 V70 M142 58 H166" stroke="#7ff6ff" stroke-width="2"/></g>
+        <path class="spd" d="M0 30 H40 M4 44 H30 M10 66 H34" stroke="#ff7a2d" stroke-width="2"/>
+      </svg>
+      <div class="ld-bar"><div id="ld-fill"></div></div>
+      <div class="ld-row"><span id="ld-label">Loading</span><b id="ld-pct">0%</b></div>
+      <p id="ld-tip"></p>
+    </div>
+  </div>
+
+  <div id="scr-main" class="screen menu hidden">
+    <div class="menu-col">
+      <h1 class="logo">NEON<span>APEX</span></h1>
+      <p class="tag">Arcade circuit racing · three circuits · four cars</p>
+      <button id="m-play" class="primary big">PLAY</button>
+      <button id="m-garage">GARAGE</button>
+      <button id="m-options">OPTIONS</button>
+      <div class="menu-foot"><span id="m-car">Car: Stradale</span> · <span id="m-best">Best --</span></div>
+    </div>
+  </div>
+
+  <div id="scr-mode" class="screen menu hidden">
+    <div class="menu-wide">
+      <h2>SELECT MODE</h2>
+      <div class="cards" id="mode-cards">
+        <div class="mcard" data-mode="quick"><b>QUICK RACE</b><p>One race, your rules. Pick track, laps and rivals.</p><i>🏁</i></div>
+        <div class="mcard" data-mode="champ"><b>CHAMPIONSHIP</b><p>3 rounds across every circuit. Points 10-8-6-5-4-3-2-1. Podium decides the champion.</p><i>🏆</i></div>
+        <div class="mcard" data-mode="tt"><b>TIME TRIAL</b><p>Just you and the clock, chasing your own ghost.</p><i>⏱</i></div>
       </div>
-      <button id="btn-start" class="primary">START RACE</button>
-      <div class="best">Best lap: <b id="menu-best">--</b></div>
-      <div class="help">W/↑ throttle · S/↓ brake/reverse · A D/← → steer · SPACE handbrake · SHIFT/N nitro · C camera · M mute · ESC pause · Gamepad supported</div>
+      <button class="back" data-back>BACK</button>
+    </div>
+  </div>
+
+  <div id="scr-track" class="screen menu hidden">
+    <div class="menu-wide">
+      <h2 id="track-title">SELECT TRACK</h2>
+      <div class="cards" id="track-cards"></div>
+      <div class="opts row3">
+        <label id="lbl-laps">Laps <select id="opt-laps"><option>1</option><option>2</option><option>3</option><option>5</option></select></label>
+        <label id="lbl-ai">Opponents <select id="opt-ai"><option>1</option><option>3</option><option>5</option><option>7</option></select></label>
+        <label id="lbl-diff">Difficulty <select id="opt-diff"><option value="0.88">Easy</option><option value="0.95">Medium</option><option value="1.0">Hard</option><option value="1.04">Insane</option></select></label>
+      </div>
+      <div class="btnrow"><button class="back" data-back>BACK</button><button id="t-start" class="primary">START</button></div>
+    </div>
+  </div>
+
+  <div id="scr-garage" class="screen menu garage hidden">
+    <div class="gpanel">
+      <h2>GARAGE</h2>
+      <div class="gname"><button id="g-prev" class="arrow">◀</button><div><b id="g-name">Stradale</b><p id="g-tag"></p></div><button id="g-next" class="arrow">▶</button></div>
+      <div id="g-stats"></div>
+      <div class="lbl wide">PAINT</div>
+      <div id="g-paint"></div>
+      <div id="g-best"></div>
+      <div class="btnrow"><button class="back" data-back>BACK</button><button id="g-select" class="primary">SELECT</button></div>
+      <p class="hint">Drag to rotate</p>
+    </div>
+  </div>
+
+  <div id="scr-options" class="screen menu hidden">
+    <div class="card wide">
+      <h2>OPTIONS</h2>
+      <div class="opts">
+        <label>Graphics <select id="o-quality"><option value="0">Low / Mobile</option><option value="1">Medium</option><option value="2">High</option></select></label>
+        <label>Default camera <select id="o-camera"><option value="0">Chase</option><option value="1">Bumper</option><option value="2">TV</option></select></label>
+        <label>Sound FX <input id="o-sfx" type="range" min="0" max="1" step="0.05"></label>
+        <label>Music <input id="o-music" type="range" min="0" max="1" step="0.05"></label>
+        <label>Speed units <select id="o-units"><option value="kmh">km/h</option><option value="mph">mph</option></select></label>
+        <label>Touch layout <select id="o-layout"><option value="standard">Steer left</option><option value="swapped">Steer right</option></select></label>
+        <label>Tilt steering <select id="o-tilt"><option value="0">Off</option><option value="1">On</option></select></label>
+        <label>Show FPS <select id="o-fps"><option value="1">On</option><option value="0">Off</option></select></label>
+      </div>
+      <p class="hint" id="o-note">Keyboard: W/↑ gas · S/↓ brake · A D steer · SPACE drift · SHIFT/N nitro · C camera · M mute · ESC pause · Gamepad supported</p>
+      <div class="btnrow"><button class="back" data-back>BACK</button><button id="o-reset">RESET RECORDS</button></div>
+    </div>
+  </div>
+
+  <div id="scr-standings" class="screen menu hidden">
+    <div class="card wide">
+      <h2 id="st-title">CHAMPIONSHIP</h2>
+      <div id="st-rounds"></div>
+      <table id="st-table"></table>
+      <div class="btnrow"><button id="st-quit" class="back">QUIT</button><button id="st-next" class="primary">NEXT ROUND</button></div>
     </div>
   </div>
 
@@ -65,13 +146,12 @@
     </div>
   </div>
 
-  <div id="results" class="screen hidden">
+  <div id="results" class="screen results hidden">
     <div class="card wide">
       <h2 id="res-title">RESULTS</h2>
       <table id="res-table"></table>
       <div id="res-note"></div>
-      <button id="btn-again" class="primary">RACE AGAIN</button>
-      <button id="btn-menu">MAIN MENU</button>
+      <div class="btnrow"><button id="btn-menu" class="back">MENU</button><button id="btn-replay">REPLAY</button><button id="btn-again" class="primary">RACE AGAIN</button></div>
     </div>
   </div>
   <script type="module" src="/src/main.ts"></script>

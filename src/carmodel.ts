@@ -137,7 +137,7 @@ function buildKit(kit: Kit, paint: THREE.Material, lift: number, quality: number
     box(1.86, 0.05, 0.42, 0, 1.32, 1.95, carbon, -0.12);
     for (const x of [-0.94, 0.94]) box(0.04, 0.3, 0.52, x, 1.24, 1.97, paint);
     for (const x of [-0.42, 0.42]) box(0.05, 0.38, 0.12, x, 1.11, 1.95);
-    box(2.02, 0.04, 0.34, 0, 0.1, -2.26);
+    box(1.9, 0.035, 0.2, 0, 0.1, -2.2);
     for (const x of [-1.1, 1.1]) box(0.08, 0.1, 2.5, x, 0.16, 0.05);
     box(1.4, 0.12, 0.25, 0, 0.18, 2.24); // diffuser
   } else if (kit === 'rally') {

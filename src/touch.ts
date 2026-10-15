@@ -25,18 +25,8 @@ export class TouchControls {
       el.addEventListener('pointerdown', e => { e.preventDefault(); this.press(el.dataset.tap!); }));
     // tilt toggle
     const tiltBtn = document.getElementById('t-tilt')!;
-    const label = () => { tiltBtn.textContent = this.tilt ? 'TILT ON' : 'TILT OFF'; document.body.classList.toggle('tilt', this.tilt); };
-    label();
-    tiltBtn.addEventListener('pointerdown', async e => {
-      e.preventDefault();
-      if (!this.tilt) {
-        const DOE = window.DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> };
-        if (DOE && typeof DOE.requestPermission === 'function') {
-          try { if ((await DOE.requestPermission()) !== 'granted') return; } catch { return; }
-        }
-      }
-      this.tilt = !this.tilt; localStorage.setItem('neonapex.tilt', this.tilt ? '1' : '0'); label();
-    });
+    this.label();
+    tiltBtn.addEventListener('pointerdown', e => { e.preventDefault(); void this.setTilt(!this.tilt); });
     window.addEventListener('deviceorientation', e => {
       if (e.beta == null) return;
       // landscape: rolling the phone like a steering wheel changes beta; sign depends on which side is down
@@ -61,7 +51,22 @@ export class TouchControls {
     document.addEventListener('gesturestart', e => e.preventDefault());
     document.addEventListener('contextmenu', e => e.preventDefault());
     let lastTap = 0;
-    document.addEventListener('touchend', e => { const t = Date.now(); if (t - lastTap < 300 && !(e.target as HTMLElement).closest('select')) e.preventDefault(); lastTap = t; }, { passive: false });
+    document.addEventListener('touchend', e => { const t = Date.now(); if (t - lastTap < 300 && !(e.target as HTMLElement).closest('select, button, input, .mcard, #g-paint, .screen')) e.preventDefault(); lastTap = t; }, { passive: false });
+  }
+  private label() {
+    const b = document.getElementById('t-tilt'); if (b) b.textContent = this.tilt ? 'TILT ON' : 'TILT OFF';
+    document.body.classList.toggle('tilt', this.tilt && this.active);
+  }
+  /** Enable/disable tilt steering (asks for iOS motion permission; call from a user gesture). Resolves to the new state. */
+  async setTilt(on: boolean): Promise<boolean> {
+    if (on) {
+      const DOE = window.DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> };
+      if (DOE && typeof DOE.requestPermission === 'function') {
+        try { if ((await DOE.requestPermission()) !== 'granted') return this.tilt; } catch { return this.tilt; }
+      }
+    }
+    this.tilt = on; localStorage.setItem('neonapex.tilt', on ? '1' : '0'); this.label(); this.sync();
+    return on;
   }
   private h(k: string) { return (this.held.get(k) ?? 0) > 0; }
   private sync() {
