@@ -10,7 +10,6 @@ export interface Assets {
   car: GLTF;          // full-detail Draco-compressed model (player / close-ups)
   carLod: GLTF;       // simplified meshopt-compressed model (AI cars, Low quality)
   carAO: THREE.Texture;
-  hdri: THREE.DataTexture;
   asphalt: PBRSet;
   grass: PBRSet;
 }
@@ -41,14 +40,27 @@ export async function loadAssets(renderer: THREE.WebGLRenderer, quality: number,
   });
   // textures are transcoded one at a time (keeps the Basis worker pool small and results unambiguous)
   const textures = (async () => { const a = await set('asphalt'); const g = await set('grass'); return [a, g] as const; })();
-  const [car, carLod, carAO, hdri, [asphalt, grass]] = await Promise.all([
+  const [car, carLod, carAO, [asphalt, grass]] = await Promise.all([
     gltf.loadAsync(`${BASE}models/ferrari.glb`),
     gltf.loadAsync(`${BASE}models/ferrari_lod.glb`),
     tex.loadAsync(`${BASE}models/ferrari_ao.png`),
-    new HDRLoader(manager).loadAsync(`${BASE}hdri/venice_sunset_${quality > 1 ? '2k' : '1k'}.hdr`),
     textures,
   ]);
-  hdri.mapping = THREE.EquirectangularReflectionMapping;
   draco.dispose();
-  return { car, carLod, carAO, hdri, asphalt, grass };
+  void quality;
+  return { car, carLod, carAO, asphalt, grass };
+}
+
+const hdriCache = new Map<string, Promise<THREE.DataTexture>>();
+/** Load (and cache) an equirect HDRI. Phones/Low get the 1k version. */
+export function loadHdri(name: string, quality: number, onProgress?: (f: number) => void): Promise<THREE.DataTexture> {
+  const key = `${name}_${quality > 1 ? '2k' : '1k'}`;
+  let p = hdriCache.get(key);
+  if (!p) {
+    p = new HDRLoader().loadAsync(`${BASE}hdri/${key}.hdr`, e => { if (e.total) onProgress?.(e.loaded / e.total); }).then(t => {
+      t.mapping = THREE.EquirectangularReflectionMapping; return t;
+    });
+    hdriCache.set(key, p);
+  }
+  return p;
 }

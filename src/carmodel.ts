@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { Assets } from './assets';
+import type { Kit } from './cars';
 
 export interface CarVisual {
   group: THREE.Group;
@@ -62,7 +63,7 @@ function getShared(assets: Assets) {
 }
 
 /** Build one car instance from the shared glTF. Each car gets its own paint and brake-light material. */
-export function buildCar(assets: Assets, color: number, quality: number, detailed: boolean): CarVisual {
+export function buildCar(assets: Assets, color: number, quality: number, detailed: boolean, kit: Kit = 'stock', rideHeight = 0): CarVisual {
   const S = getShared(assets);
   const src = detailed ? assets.car : assets.carLod;
   if (!detailed && !S.lodPrepared) {
@@ -97,6 +98,9 @@ export function buildCar(assets: Assets, color: number, quality: number, detaile
 
   const group = new THREE.Group();
   group.add(model);
+  const main = model.getObjectByName('main');
+  if (main && rideHeight) main.position.y += rideHeight;
+  group.add(buildKit(kit, paint, rideHeight, quality));
   // baked contact-shadow (ambient occlusion) under the car
   const ao = new THREE.Mesh(new THREE.PlaneGeometry(0.655 * 4, 1.3 * 4), S.aoMat);
   ao.rotation.x = -Math.PI / 2; ao.position.y = 0.02; ao.renderOrder = 2; group.add(ao);
@@ -109,4 +113,50 @@ export function buildCar(assets: Assets, color: number, quality: number, detaile
     group.add(f); flames.push(f);
   }
   return { group, wheels, brakeMat, flames, paint };
+}
+
+let glowTex: THREE.Texture | null = null;
+function underglowTexture() {
+  if (glowTex) return glowTex;
+  const cv = document.createElement('canvas'); cv.width = 64; cv.height = 128; const c = cv.getContext('2d')!;
+  const g = c.createRadialGradient(32, 64, 4, 32, 64, 62); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  c.fillStyle = g; c.fillRect(0, 0, 64, 128);
+  glowTex = new THREE.CanvasTexture(cv); return glowTex;
+}
+
+/** Procedural bodykits that make each car visually distinct. Dimensions fit the 458 model (x ±1.13, y 0..1.24, z −2.27..2.27). */
+function buildKit(kit: Kit, paint: THREE.Material, lift: number, quality: number): THREE.Group {
+  const g = new THREE.Group();
+  if (kit === 'stock') return g;
+  const carbon = shared!.carbon;
+  const box = (w: number, h: number, d: number, x: number, y: number, z: number, mat: THREE.Material = carbon, rx = 0) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y + lift, z); m.rotation.x = rx;
+    m.castShadow = quality > 0; g.add(m); return m;
+  };
+  if (kit === 'gt') {
+    box(1.86, 0.05, 0.42, 0, 1.32, 1.95, carbon, -0.12);
+    for (const x of [-0.94, 0.94]) box(0.04, 0.3, 0.52, x, 1.24, 1.97, paint);
+    for (const x of [-0.42, 0.42]) box(0.05, 0.38, 0.12, x, 1.11, 1.95);
+    box(2.02, 0.04, 0.34, 0, 0.1, -2.26);
+    for (const x of [-1.1, 1.1]) box(0.08, 0.1, 2.5, x, 0.16, 0.05);
+    box(1.4, 0.12, 0.25, 0, 0.18, 2.24); // diffuser
+  } else if (kit === 'rally') {
+    box(1.25, 0.1, 0.14, 0, 1.33, -0.12);
+    const lampMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff2d0, emissiveIntensity: 5 });
+    for (let i = 0; i < 4; i++) box(0.22, 0.1, 0.04, -0.45 + i * 0.3, 1.33, -0.2, lampMat);
+    box(0.5, 0.1, 0.6, 0, 1.29, 0.32, paint); // roof scoop
+    const flap = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 });
+    for (const x of [-0.82, 0.82]) for (const z of [-0.72, 1.92]) box(0.36, 0.3, 0.02, x, 0.24 - lift, z, flap);
+    box(1.6, 0.06, 0.4, 0, 1.0, 2.15, carbon, 0.2);
+  } else if (kit === 'drift') {
+    box(1.72, 0.07, 0.3, 0, 1.0, 2.12, carbon, 0.35);
+    for (const side of [-1, 1]) for (const k of [0, 1]) {
+      const c = box(0.3, 0.03, 0.16, side * 0.95, 0.32 + k * 0.12, -2.06 + k * 0.08); c.rotation.z = side * 0.25;
+    }
+    const glow = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 4.6), new THREE.MeshBasicMaterial({
+      map: underglowTexture(), color: 0xff2dd8, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, opacity: 0.85 }));
+    glow.rotation.x = -Math.PI / 2; glow.position.y = 0.035; glow.renderOrder = 2; g.add(glow);
+    for (const x of [-1.1, 1.1]) box(0.08, 0.1, 2.5, x, 0.12, 0.05, paint);
+  }
+  return g;
 }

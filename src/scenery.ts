@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Lensflare, LensflareElement } from 'three/examples/jsm/objects/Lensflare.js';
 import { Track, WALL_OFFSET, textTexture } from './track';
 import type { Assets } from './assets';
+import type { TrackDef } from './tracks';
 
 /** Find the sun in an equirect HDR (brightest texel) and return its world direction. */
 function sunFromHDRI(t: THREE.DataTexture): THREE.Vector3 {
@@ -41,21 +42,25 @@ function flareTex(kind: 'glow' | 'ring' | 'streak' | 'hex'): THREE.Texture {
 }
 
 /** HDRI lighting, sun + lens flare, PBR ground and instanced scenery. */
-export function buildEnvironment(scene: THREE.Scene, renderer: THREE.WebGLRenderer, track: Track, quality: number, assets: Assets) {
-  // --- HDRI (Poly Haven "Venice Sunset", CC0) for background + image-based lighting
+export function buildEnvironment(scene: THREE.Scene, root: THREE.Object3D, renderer: THREE.WebGLRenderer, track: Track, quality: number,
+  assets: Assets, def: TrackDef, hdri: THREE.DataTexture) {
+  // --- HDRI (Poly Haven, CC0) for background + image-based lighting
   const pmrem = new THREE.PMREMGenerator(renderer);
-  scene.environment = pmrem.fromEquirectangular(assets.hdri).texture;
-  scene.background = assets.hdri;
-  scene.backgroundIntensity = 0.9;
-  scene.environmentIntensity = 0.9;
+  (scene.environment as THREE.Texture | null)?.dispose();
+  scene.environment = pmrem.fromEquirectangular(hdri).texture;
+  scene.background = hdri;
+  scene.backgroundIntensity = def.bgIntensity;
+  scene.environmentIntensity = def.envIntensity;
   pmrem.dispose();
-  scene.fog = new THREE.Fog(0xb7a594, 500, 2600);
+  scene.fog = new THREE.Fog(def.fog, def.fogNear, def.fogFar);
+  const scene0 = scene; void scene0;
+  { const scene = root; // everything below is per-track and disposable
 
-  // --- sun, aligned with the HDRI's sun (elevation clamped so shadows stay readable)
-  const sun = sunFromHDRI(assets.hdri);
-  const sunLight = sun.clone(); sunLight.y = Math.max(sunLight.y, 0.22); sunLight.normalize();
-  scene.add(new THREE.HemisphereLight(0xffe2c4, 0x3a3328, 0.25));
-  const dir = new THREE.DirectionalLight(0xffc89a, 3.2);
+  // --- sun (or moon at night), aligned with the HDRI's brightest point (elevation clamped so shadows stay readable)
+  const sun = def.night ? new THREE.Vector3(0.35, 0.6, 0.3).normalize() : sunFromHDRI(hdri);
+  const sunLight = sun.clone(); sunLight.y = Math.max(sunLight.y, def.rain ? 0.6 : 0.22); sunLight.normalize();
+  scene.add(new THREE.HemisphereLight(def.night ? 0x6070b0 : 0xffe2c4, 0x3a3328, def.hemi));
+  const dir = new THREE.DirectionalLight(def.sunColor, def.sunIntensity);
   dir.position.copy(sunLight).multiplyScalar(300);
   if (quality > 0) {
     dir.castShadow = true;
@@ -67,7 +72,7 @@ export function buildEnvironment(scene: THREE.Scene, renderer: THREE.WebGLRender
   scene.add(dir); scene.add(dir.target);
 
   // --- lens flare + anamorphic streak at the visible sun position
-  if (quality > 0) {
+  if (quality > 0 && !def.night && !def.rain) {
     const flare = new Lensflare();
     flare.addElement(new LensflareElement(flareTex('glow'), 420, 0, new THREE.Color(1, 0.9, 0.8)));
     flare.addElement(new LensflareElement(flareTex('streak'), 1100, 0, new THREE.Color(1, 0.85, 0.7)));
@@ -81,7 +86,7 @@ export function buildEnvironment(scene: THREE.Scene, renderer: THREE.WebGLRender
 
   // --- ground: CC0 PBR grass (ambientCG)
   const G = assets.grass;
-  const groundMat = new THREE.MeshStandardMaterial({ map: G.map, normalMap: G.normalMap, roughnessMap: G.roughnessMap, color: 0x9fb46a });
+  const groundMat = new THREE.MeshStandardMaterial({ map: G.map, normalMap: G.normalMap, roughnessMap: G.roughnessMap, color: def.grass });
   const groundGeo = new THREE.PlaneGeometry(4000, 4000);
   { const uv = groundGeo.getAttribute('uv'); for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 900, uv.getY(i) * 900); }
   const ground = new THREE.Mesh(groundGeo, groundMat);
@@ -99,7 +104,7 @@ export function buildEnvironment(scene: THREE.Scene, renderer: THREE.WebGLRender
   const UP = THREE.Object3D.DEFAULT_UP;
 
   // --- trees: broadleaf (jittered icosphere canopy) + conifers, instanced
-  const treeCount = [250, 600, 1100][quality];
+  const treeCount = Math.round([250, 600, 1100][quality] * def.trees);
   const trunkG = new THREE.CylinderGeometry(0.22, 0.38, 3.2, 7); trunkG.translate(0, 1.6, 0);
   const canopyG = new THREE.IcosahedronGeometry(2.6, quality > 1 ? 2 : 1);
   { const pa = canopyG.getAttribute('position'); const r2 = mulberry(7);
@@ -137,11 +142,11 @@ export function buildEnvironment(scene: THREE.Scene, renderer: THREE.WebGLRender
     const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; return t;
   })();
   const bG = new THREE.BoxGeometry(1, 1, 1); bG.translate(0, 0.5, 0);
-  const bMat = new THREE.MeshStandardMaterial({ color: 0x8a96aa, roughness: 0.12, metalness: 0.9, emissiveMap: winTex, emissive: 0xffffff, emissiveIntensity: 0.9, envMapIntensity: 1.2 });
-  const bCount = [40, 90, 140][quality];
+  const bMat = new THREE.MeshStandardMaterial({ color: 0x8a96aa, roughness: 0.12, metalness: 0.9, emissiveMap: winTex, emissive: 0xffffff, emissiveIntensity: def.windows, envMapIntensity: 1.2 });
+  const bCount = Math.round([40, 90, 140][quality] * (def.night ? 1.6 : 1));
   const blds = new THREE.InstancedMesh(bG, bMat, bCount);
   for (let i = 0; i < bCount; i++) {
-    const ang = rnd() * Math.PI * 2, r = 700 + rnd() * 450;
+    const ang = rnd() * Math.PI * 2, r = (def.night ? 480 : 700) + rnd() * 450;
     const w = 20 + rnd() * 40, h = 30 + rnd() * 170;
     m.compose(p.set(Math.cos(ang) * r + 200, 0, Math.sin(ang) * r), q.setFromAxisAngle(UP, rnd() * 3), sc.set(w, h, 20 + rnd() * 40));
     blds.setMatrixAt(i, m); blds.setColorAt(i, col.setHSL(0.58 + rnd() * 0.06, 0.15, 0.45 + rnd() * 0.3));
@@ -154,7 +159,7 @@ export function buildEnvironment(scene: THREE.Scene, renderer: THREE.WebGLRender
   const poleG = new THREE.CylinderGeometry(0.12, 0.18, 8, 8); poleG.translate(0, 4, 0);
   const headG = new THREE.BoxGeometry(1.6, 0.2, 0.5); headG.translate(0, 8, 0);
   const poles = new THREE.InstancedMesh(poleG, new THREE.MeshStandardMaterial({ color: 0x30343b, metalness: 0.9, roughness: 0.3 }), lampCount);
-  const heads = new THREE.InstancedMesh(headG, new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffe2a8, emissiveIntensity: 6 }), lampCount);
+  const heads = new THREE.InstancedMesh(headG, new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: def.night ? 0xbfe0ff : 0xffe2a8, emissiveIntensity: def.lamp }), lampCount);
   for (let i = 0; i < lampCount; i++) {
     const s = track.samples[i * lampSpacing];
     const side = i % 2 ? 1 : -1, d = (WALL_OFFSET + 1.5) * side;
@@ -217,6 +222,7 @@ export function buildEnvironment(scene: THREE.Scene, renderer: THREE.WebGLRender
   scene.add(stand);
 
   return { dirLight: dir, sunDir: sunLight };
+  }
 }
 
 export function mulberry(a: number) {

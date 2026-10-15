@@ -92,7 +92,7 @@ export class Track {
   }
 
   /** Build all track visuals. */
-  build(scene: THREE.Scene, quality: number, assets: Assets, wet: boolean): void {
+  build(scene: THREE.Object3D, quality: number, assets: Assets, wet: boolean, neon = false): void {
     const N = this.N;
     // --- road ribbon: CC0 PBR asphalt (ambientCG) + painted markings decal layer
     // tiling is baked into UVs (no texture clones) so compressed textures are uploaded once
@@ -126,6 +126,15 @@ export class Track {
     for (const side of [-1, 1]) {
       const g = this.wall(side * (WALL_OFFSET + 0.3), 1.1, 0.6);
       const m = new THREE.Mesh(g, wallMat); m.castShadow = quality > 0; m.receiveShadow = true; scene.add(m);
+    }
+    // --- neon light strips on top of the barriers (night tracks)
+    if (neon) {
+      const cols = [0xff2d75, 0x00e5ff];
+      [-1, 1].forEach((side, i) => {
+        const g = this.wall(side * (WALL_OFFSET + 0.3), 0.07, 0.66); g.translate(0, 1.1, 0);
+        const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0x000000, emissive: cols[i], emissiveIntensity: 5 }));
+        scene.add(m);
+      });
     }
     // --- start/finish line + gantry
     const s0 = this.samples[0];

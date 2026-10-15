@@ -12,10 +12,13 @@ export class Hud {
   private el = (id: string) => document.getElementById(id)!;
   private speedo = (document.getElementById('speedo') as HTMLCanvasElement).getContext('2d')!;
   private map = (document.getElementById('minimap') as HTMLCanvasElement).getContext('2d')!;
-  private mapBg: HTMLCanvasElement;
-  private toMap: (x: number, z: number) => [number, number];
+  private mapBg!: HTMLCanvasElement;
+  private toMap!: (x: number, z: number) => [number, number];
   private msgT = 0;
-  constructor(track: Track) {
+  units: 'kmh' | 'mph' = 'kmh';
+  ghost: { x: number; z: number } | null = null;
+  showFps = true;
+  setTrack(track: Track) {
     let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
     for (const s of track.samples) { minX = Math.min(minX, s.p.x); maxX = Math.max(maxX, s.p.x); minZ = Math.min(minZ, s.p.z); maxZ = Math.max(maxZ, s.p.z); }
     const size = 220, pad = 18, sc = (size - pad * 2) / Math.max(maxX - minX, maxZ - minZ);
@@ -38,6 +41,19 @@ export class Hud {
     const L = this.el('lights'); const n = Math.min(5, Math.max(0, Math.floor((4 - countdown) / 3 * 5) + 1));
     L.classList.add('on'); L.classList.toggle('go', countdown <= 1);
     Array.from(L.children).forEach((c, i) => c.classList.toggle('red', i < n && countdown > 1));
+  }
+  /** Floating score popup (drift banked, near miss, takedown...). */
+  popup(text: string, cls = '') {
+    const box = this.el('popups'); const d = document.createElement('div'); d.className = 'pop ' + cls; d.textContent = text;
+    box.appendChild(d); setTimeout(() => d.remove(), 1600);
+    while (box.children.length > 4) box.firstChild!.remove();
+  }
+  combo(text: string | null) { const c = this.el('combo'); c.textContent = text ?? ''; c.classList.toggle('on', !!text); }
+  score(v: number) { this.el('h-score').textContent = v.toLocaleString('en-US'); }
+  /** Time-trial delta vs ghost (negative = ahead). */
+  delta(v: number | null) {
+    const d = this.el('h-delta'); if (v == null || !isFinite(v)) { d.textContent = ''; return; }
+    d.textContent = `${v < 0 ? '−' : '+'}${Math.abs(v).toFixed(2)}`; d.className = v < 0 ? 'ahead' : 'behind';
   }
   update(dt: number, player: HudRacer, racers: HudRacer[], laps: number, time: number, best: number, fps: number) {
     const lap = Math.min(laps, Math.max(1, player.crossings));
@@ -66,16 +82,17 @@ export class Hud {
     c.beginPath(); c.arc(cx, cy, R, a0, a0 + (a1 - a0) * rpmT); c.lineWidth = 10; c.strokeStyle = grad; c.stroke();
     c.lineWidth = 2; c.strokeStyle = 'rgba(255,255,255,.6)';
     for (let i = 0; i <= 8; i++) { const a = a0 + (a1 - a0) * i / 8.4; c.beginPath(); c.moveTo(cx + Math.cos(a) * (R - 16), cy + Math.sin(a) * (R - 16)); c.lineTo(cx + Math.cos(a) * (R - 24), cy + Math.sin(a) * (R - 24)); c.stroke(); }
-    const kmh = Math.round(Math.abs(p.phys.vf) * 3.6);
+    const kmh = Math.round(Math.abs(p.phys.vf) * (this.units === 'mph' ? 2.23694 : 3.6));
     c.textAlign = 'center'; c.fillStyle = '#fff'; c.shadowColor = '#00e5ff'; c.shadowBlur = 12;
     c.font = 'italic 800 58px system-ui, sans-serif'; c.fillText(String(kmh), cx, cy + 12);
-    c.shadowBlur = 0; c.font = '600 13px system-ui'; c.fillStyle = '#7ff6ff'; c.fillText('KM/H', cx, cy + 32);
+    c.shadowBlur = 0; c.font = '600 13px system-ui'; c.fillStyle = '#7ff6ff'; c.fillText(this.units === 'mph' ? 'MPH' : 'KM/H', cx, cy + 32);
     c.font = '800 24px system-ui'; c.fillStyle = p.phys.rpm > 7400 ? '#ff2d55' : '#fff';
     c.fillText(p.phys.vf < -0.5 ? 'R' : String(p.phys.gear), cx, cy + 66);
-    c.font = '11px system-ui'; c.fillStyle = 'rgba(255,255,255,.45)'; c.fillText(`${Math.round(fps)} FPS`, cx, cy + 88);
+    if (this.showFps) { c.font = '11px system-ui'; c.fillStyle = 'rgba(255,255,255,.45)'; c.fillText(`${Math.round(fps)} FPS`, cx, cy + 88); }
   }
   private drawMap(player: HudRacer, racers: HudRacer[]) {
     const c = this.map; c.clearRect(0, 0, 220, 220); c.drawImage(this.mapBg, 0, 0);
+    if (this.ghost) { const [x, y] = this.toMap(this.ghost.x, this.ghost.z); c.beginPath(); c.arc(x, y, 4, 0, Math.PI * 2); c.fillStyle = 'rgba(127,246,255,.8)'; c.fill(); }
     for (const r of racers) {
       if (r === player) continue;
       const [x, y] = this.toMap(r.phys.pos.x, r.phys.pos.z);
@@ -86,4 +103,19 @@ export class Hud {
     c.beginPath(); c.moveTo(0, -8); c.lineTo(5, 6); c.lineTo(-5, 6); c.closePath();
     c.fillStyle = '#ff2d75'; c.strokeStyle = '#fff'; c.lineWidth = 1.5; c.fill(); c.stroke(); c.restore();
   }
+}
+
+/** Draw a track outline into any canvas (used for track-select cards). */
+export function drawTrackThumb(canvas: HTMLCanvasElement, track: Track, color: string) {
+  const c = canvas.getContext('2d')!, W = canvas.width, H = canvas.height;
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (const s of track.samples) { minX = Math.min(minX, s.p.x); maxX = Math.max(maxX, s.p.x); minZ = Math.min(minZ, s.p.z); maxZ = Math.max(maxZ, s.p.z); }
+  const pad = 14, sc = Math.min((W - pad * 2) / (maxX - minX), (H - pad * 2) / (maxZ - minZ));
+  const ox = (W - (maxX - minX) * sc) / 2, oz = (H - (maxZ - minZ) * sc) / 2;
+  c.clearRect(0, 0, W, H); c.lineJoin = 'round';
+  c.shadowColor = color; c.shadowBlur = 14;
+  c.beginPath(); c.lineWidth = 6; c.strokeStyle = color;
+  track.samples.forEach((s, i) => { const x = ox + (s.p.x - minX) * sc, y = oz + (s.p.z - minZ) * sc; i ? c.lineTo(x, y) : c.moveTo(x, y); });
+  c.closePath(); c.stroke(); c.shadowBlur = 0; c.lineWidth = 2; c.strokeStyle = '#fff'; c.stroke();
+  const s0 = track.samples[0]; c.fillStyle = '#fff'; c.fillRect(ox + (s0.p.x - minX) * sc - 7, oz + (s0.p.z - minZ) * sc - 2, 14, 4);
 }
