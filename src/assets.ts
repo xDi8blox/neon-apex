@@ -1,15 +1,9 @@
 import * as THREE from 'three';
-import { GLTFLoader, GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
 import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader.js';
-import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 
 /** Everything loaded from /public. See CREDITS.md for sources and licenses. */
 export interface Assets {
-  car: GLTF;          // full-detail Draco-compressed model (player / close-ups)
-  carLod: GLTF;       // simplified meshopt-compressed model (AI cars, Low quality)
-  carAO: THREE.Texture;
   asphalt: PBRSet;
   grass: PBRSet;
 }
@@ -20,8 +14,6 @@ const BASE = import.meta.env.BASE_URL;
 export async function loadAssets(renderer: THREE.WebGLRenderer, quality: number, onProgress: (f: number) => void): Promise<Assets> {
   const manager = new THREE.LoadingManager();
   manager.onProgress = (_u, loaded, total) => onProgress(loaded / total);
-  const draco = new DRACOLoader(manager).setDecoderPath(`${BASE}draco/`);
-  const gltf = new GLTFLoader(manager).setDRACOLoader(draco).setMeshoptDecoder(MeshoptDecoder);
   const ktx2 = new KTX2Loader(manager).setTranscoderPath(`${BASE}basis/`).detectSupport(renderer);
   const tex = new THREE.TextureLoader(manager);
 
@@ -40,15 +32,9 @@ export async function loadAssets(renderer: THREE.WebGLRenderer, quality: number,
   });
   // textures are transcoded one at a time (keeps the Basis worker pool small and results unambiguous)
   const textures = (async () => { const a = await set('asphalt'); const g = await set('grass'); return [a, g] as const; })();
-  const [car, carLod, carAO, [asphalt, grass]] = await Promise.all([
-    gltf.loadAsync(`${BASE}models/ferrari.glb`),
-    gltf.loadAsync(`${BASE}models/ferrari_lod.glb`),
-    tex.loadAsync(`${BASE}models/ferrari_ao.png`),
-    textures,
-  ]);
-  draco.dispose();
+  const [asphalt, grass] = await textures;
   void quality;
-  return { car, carLod, carAO, asphalt, grass };
+  return { asphalt, grass };
 }
 
 const hdriCache = new Map<string, Promise<THREE.DataTexture>>();

@@ -4,7 +4,7 @@ import { buildCar } from './carmodel';
 import type { Assets } from './assets';
 import type { CarDef } from './cars';
 
-/** Garage showroom: a dark studio with a neon turntable; the car spins slowly and can be dragged. */
+/** Garage showroom: a dark studio with a forge turntable; the car spins slowly and can be dragged. */
 export class Showroom {
   readonly scene = new THREE.Scene();
   readonly camera = new THREE.PerspectiveCamera(36, 1, 0.1, 200);
@@ -20,26 +20,26 @@ export class Showroom {
     const pmrem = new THREE.PMREMGenerator(renderer);
     this.scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture; pmrem.dispose();
     this.scene.environmentIntensity = 0.7;
-    this.scene.background = new THREE.Color(0x04060d);
-    this.scene.fog = new THREE.Fog(0x04060d, 14, 40);
+    this.scene.background = new THREE.Color(0x0a0302);
+    this.scene.fog = new THREE.Fog(0x0a0302, 14, 40);
     const floor = new THREE.Mesh(new THREE.CircleGeometry(30, 64).rotateX(-Math.PI / 2),
-      new THREE.MeshStandardMaterial({ color: 0x0b0f1c, roughness: 0.25, metalness: 0.6 }));
+      new THREE.MeshStandardMaterial({ color: 0x120806, roughness: 0.35, metalness: 0.5 }));
     floor.receiveShadow = true; this.scene.add(floor);
-    const disc = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 3.5, 0.08, 64), new THREE.MeshStandardMaterial({ color: 0x151b2c, roughness: 0.3, metalness: 0.8 }));
+    const disc = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 3.5, 0.08, 64), new THREE.MeshStandardMaterial({ color: 0x1c1210, roughness: 0.5, metalness: 0.8 }));
     disc.position.y = 0.04; disc.receiveShadow = true; this.turntable.add(disc);
-    this.ring = new THREE.MeshBasicMaterial({ color: 0xff2d75, toneMapped: false });
+    this.ring = new THREE.MeshBasicMaterial({ color: 0xff4a10, toneMapped: false });
     const ring = new THREE.Mesh(new THREE.TorusGeometry(3.47, 0.03, 8, 96).rotateX(Math.PI / 2), this.ring); ring.position.y = 0.08; this.scene.add(ring);
     // back wall light bars
     for (let i = 0; i < 7; i++) {
-      const bar = new THREE.Mesh(new THREE.BoxGeometry(0.08, 5, 0.08), new THREE.MeshBasicMaterial({ color: i % 2 ? 0x00e5ff : 0xff2d75, toneMapped: false }));
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(0.08, 5, 0.08), new THREE.MeshBasicMaterial({ color: i % 2 ? 0xff2a08 : 0xffa020, toneMapped: false }));
       const a = -0.9 + i * 0.3; bar.position.set(Math.sin(a) * 14, 2.5, -Math.cos(a) * 14); this.scene.add(bar);
     }
     this.scene.add(this.turntable);
     const key = new THREE.SpotLight(0xffffff, 140, 30, 0.6, 0.6); key.position.set(4, 8, 5); key.castShadow = quality > 0;
     key.shadow.mapSize.set(1024, 1024); this.scene.add(key);
-    const rim = new THREE.PointLight(0x00e5ff, 30, 12); rim.position.set(-4, 2, -3); this.scene.add(rim);
-    const rim2 = new THREE.PointLight(0xff2d75, 30, 12); rim2.position.set(4, 1.5, -3); this.scene.add(rim2);
-    this.scene.add(new THREE.HemisphereLight(0x8090c0, 0x101010, 0.3));
+    const rim = new THREE.PointLight(0xff3a10, 40, 12); rim.position.set(-4, 2, -3); this.scene.add(rim);
+    const rim2 = new THREE.PointLight(0xffa030, 30, 12); rim2.position.set(4, 1.5, -3); this.scene.add(rim2);
+    this.scene.add(new THREE.HemisphereLight(0xc07050, 0x200500, 0.35));
   }
 
   setCar(def: CarDef, color: number) {

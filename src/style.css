@@ -144,7 +144,7 @@ input[type=range] { width: 140px; accent-color: #ff2d75; }
 .gname b { font-size: 30px; font-style: italic; letter-spacing: 2px; }
 .gname p { margin: 2px 0 0; opacity: .7; font-size: 13px; }
 button.arrow { width: 52px; flex: none; margin: 0; }
-.stat { display: grid; grid-template-columns: 90px 1fr 26px; align-items: center; gap: 10px; font-size: 12px; letter-spacing: 2px; margin: 7px 0; }
+.stat { display: grid; grid-template-columns: 96px 1fr 26px; align-items: center; gap: 10px; font-size: 12px; letter-spacing: 2px; margin: 7px 0; }
 .stat .sb { height: 10px; background: rgba(255,255,255,.08); border-radius: 5px; overflow: hidden; transform: skewX(-20deg); }
 .stat .sb i { display: block; height: 100%; background: linear-gradient(90deg, #ff2d75, #ff7a2d); box-shadow: 0 0 10px #ff2d75; transition: width .5s cubic-bezier(.2,.9,.3,1.2); }
 .lbl.wide { width: auto; margin-top: 12px; }
@@ -238,7 +238,7 @@ body.touch #popups { top: 36%; } body.touch #combo { top: 27%; }
 @font-face { font-family: 'Metal Mania'; src: url('/fonts/MetalMania-Regular.ttf') format('truetype'); font-display: swap; }
 :root {
   --ember: #ff5a1a; --fire: #ffb02e; --blood: #c3101a; --ash: #2a2220; --coal: #0b0605; --bone: #e9dcc4;
-  --stone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.045' numOctaves='5' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 .09 0 0 0 0 .06 0 0 0 0 .055 0 0 0 -1.6 1.25'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3Cg fill='none' stroke='%23ff4a10' stroke-opacity='.55' stroke-width='1.2'%3E%3Cpath d='M0 62 L38 70 L61 52 L104 88 L150 79 L176 101 L240 92'/%3E%3Cpath d='M61 52 L72 18 L66 0'/%3E%3Cpath d='M150 79 L161 140 L141 178 L152 240'/%3E%3Cpath d='M104 88 L96 150 L40 170 L0 166'/%3E%3Cpath d='M176 101 L218 150 L240 158'/%3E%3C/g%3E%3C/svg%3E");
+  --stone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.045' numOctaves='5' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 .09 0 0 0 0 .06 0 0 0 0 .055 0 0 0 -1.6 1.25'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)'/%3E%3Cg fill='none' stroke='%23ff4a10' stroke-opacity='.55' stroke-width='1.2'%3E%3Cpath d='M0 62 L38 70 L61 52 L104 88 L150 79 L176 101 L240 92'/%3E%3Cpath d='M61 52 L72 18 L66 0'/%3E%3Cpath d='M150 79 L161 140 L141 178 L152 240'/%3E%3Cpath d='M104 88 L96 150 L40 170 L0 166'/%3E%3Cpath d='M176 101 L218 150 L240 158'/%3E%3C/g%3E%3C/svg%3E");
 }
 html, body { font-family: 'Metal Mania', 'Pirata One', Georgia, serif; color: var(--bone); letter-spacing: .5px; }
 .hud-num, #hud, td, select, input, .ld-row, .stat, #g-best, .menu-foot, .hint, .opts label, p { font-family: Georgia, 'Times New Roman', serif; }

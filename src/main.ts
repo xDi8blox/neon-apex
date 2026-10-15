@@ -9,7 +9,7 @@ import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js';
 import { SSRPass } from 'three/examples/jsm/postprocessing/SSRPass.js';
 import { FXAAPass } from 'three/examples/jsm/postprocessing/FXAAPass.js';
 import { loadAssets, loadHdri, Assets } from './assets';
-import { buildCar, flameUniforms } from './carmodel';
+import { buildCar, flameUniforms, setGlow, engineColor } from './carmodel';
 import { Track, ROAD_WIDTH, CURB_WIDTH, WALL_OFFSET, textTexture } from './track';
 import { CarPhysics, CarInput } from './car';
 import { buildEnvironment } from './scenery';
@@ -181,7 +181,7 @@ const COLORS = [0xc3101a, 0x1b1b22, 0xb9a68a, 0x5a0f4a, 0xff4a10, 0x3a0a0a, 0xff
 const NAMES = ['YOU', 'Vega', 'Malphas', 'Lilith', 'Azazel', 'Mordre', 'Belial', 'Morrigan'];
 const PAINTS = [0x8a0d0d, 0xc3101a, 0xff4a10, 0xffb02e, 0x1b1b22, 0xb9a68a, 0x5a0f4a, 0x3a0a0a, 0x2e3a12, 0xe9dcc4];
 interface Racer {
-  name: string; car: CarDef; phys: CarPhysics; mesh: THREE.Group; wheels: THREE.Object3D[]; brakeMat: THREE.MeshStandardMaterial; flames: THREE.Mesh[];
+  name: string; car: CarDef; phys: CarPhysics; mesh: THREE.Group; wheels: THREE.Object3D[]; brakeMat: THREE.MeshStandardMaterial; flames: THREE.Mesh[]; glow: THREE.MeshBasicMaterial; boostGlow: number;
   isPlayer: boolean; idx: number; crossings: number; half: boolean; lapStart: number; lastLap: number; bestLap: number;
   finished: boolean; finishTime: number; skill: number; lineBias: number; input: CarInput; wheelRot: number; place: number;
   hitT: number; wreckT: number; nearMin: number; nearRel: number; nearContact: boolean; nearCool: number;
@@ -192,13 +192,13 @@ let camTarget!: Racer;
 
 function makeRacer(i: number, isPlayer: boolean, skill: number, def: CarDef, color: number): Racer {
   const detailed = quality > 0 && isPlayer;
-  const { group, wheels, brakeMat, flames } = buildCar(assets, color, quality, detailed, def.kit, def.phys.rideHeight ?? 0);
+  const { group, wheels, brakeMat, flames, glow } = buildCar(assets, color, quality, detailed, def.kit, def.phys.rideHeight ?? 0);
   scene.add(group);
   const phys = new CarPhysics();
   applyCar(phys, def, isPlayer);
   phys.power = isPlayer ? 1 : skill;
   phys.surfaceGrip = trackDef.grip;
-  return { name: NAMES[i % NAMES.length], car: def, phys, mesh: group, wheels, brakeMat, flames, isPlayer, idx: 0, crossings: 0, half: false, lapStart: 0, lastLap: 0,
+  return { name: NAMES[i % NAMES.length], car: def, phys, mesh: group, wheels, brakeMat, flames, glow, boostGlow: 0, isPlayer, idx: 0, crossings: 0, half: false, lapStart: 0, lastLap: 0,
     bestLap: Infinity, finished: false, finishTime: 0, skill, lineBias: (Math.random() - 0.5) * 2, input: { throttle: 0, brake: 0, steer: 0, handbrake: false },
     wheelRot: 0, place: 1, hitT: 0, wreckT: 0, nearMin: 99, nearRel: 0, nearContact: false, nearCool: 0 };
 }
@@ -694,7 +694,10 @@ function syncMeshes(dt: number, trails = true) {
     r.wheelRot += p.vf * dt / 0.36;
     r.wheels.forEach((w, i) => { if (i < 2) w.rotation.y = -p.steerAngle; w.rotation.x = -r.wheelRot; });
     r.brakeMat.emissiveIntensity = r.input.brake > 0.1 ? 7 : 1.4;
-    for (const f of r.flames) { f.visible = p.boosting; if (p.boosting) f.scale.set(1, 1, 0.8 + Math.random() * 0.6); }
+    const breath = Math.min(1, Math.max(0, r.input.throttle) * 0.6 + p.speed / 160);
+    for (const f of r.flames) { f.visible = true; if (p.boosting) f.scale.set(1.25, 1.25, 1 + Math.random() * 0.8); else f.scale.set(0.45, 0.45, 0.15 + breath * 0.35 + Math.random() * 0.12); }
+    r.boostGlow += ((p.boosting ? 1 : 0) - r.boostGlow) * Math.min(1, dt * 5);
+    setGlow(r.glow, engineColor(r.car.kit), r.boostGlow, time + r.idx);
     if (!trails) continue;
     const sliding = (p.slipRear > 0.14 || (r.input.handbrake && p.speed > 6) || (p.wheelspin > 0.85 && p.speed < 18 && r.input.throttle > 0.5)) && p.speed > 3 && !p.offroad;
     for (let w = 2; w < 4; w++) {
@@ -1019,7 +1022,7 @@ function garageCar() {
   const col = settings.colors[c.id] ?? c.color;
   showroom!.setCar(c, col); showroom!.setAccent(new THREE.Color(trackDef.accent).getHex());
   $('g-name').textContent = c.name; $('g-tag').textContent = c.tagline; $('g-lore').textContent = c.lore;
-  $('g-stats').innerHTML = STAT_KEYS.map(k => `<div class="stat"><span>${k.toUpperCase()}</span><div class="sb"><i style="width:0"></i></div><b>${c.stats[k]}</b></div>`).join('');
+  $('g-stats').innerHTML = STAT_KEYS.map(k => `<div class="stat"><span>${k === 'nitro' ? 'SOUL BURN' : k.toUpperCase()}</span><div class="sb"><i style="width:0"></i></div><b>${c.stats[k]}</b></div>`).join('');
   requestAnimationFrame(() => requestAnimationFrame(() => $('g-stats').querySelectorAll<HTMLElement>('i').forEach((el, i) => (el.style.width = `${c.stats[STAT_KEYS[i]] * 10}%`))));
   const paints = PAINTS.includes(c.color) ? PAINTS : [c.color, ...PAINTS.slice(0, -1)];
   $('g-paint').innerHTML = paints.map(p => `<i data-c="${p}" style="background:#${p.toString(16).padStart(6, '0')}" class="${p === col ? 'sel' : ''}"></i>`).join('');
