@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { Assets } from './assets';
 
 export interface TrackSample {
   p: THREE.Vector3;   // centerline point
@@ -91,24 +92,33 @@ export class Track {
   }
 
   /** Build all track visuals. */
-  build(scene: THREE.Scene, quality: number): void {
+  build(scene: THREE.Scene, quality: number, assets: Assets, wet: boolean): void {
     const N = this.N;
-    // --- road ribbon
-    const roadGeo = this.ribbon(-ROAD_WIDTH / 2, ROAD_WIDTH / 2, 0.02, 1);
-    const roadMat = new THREE.MeshStandardMaterial({ map: roadTexture(), roughness: 0.85, metalness: 0.05 });
-    const road = new THREE.Mesh(roadGeo, roadMat); road.receiveShadow = true; scene.add(road);
-    // --- curbs
-    const curbMat = new THREE.MeshStandardMaterial({ map: curbTexture(), roughness: 0.6 });
+    // --- road ribbon: CC0 PBR asphalt (ambientCG) + painted markings decal layer
+    // tiling is baked into UVs (no texture clones) so compressed textures are uploaded once
+    const A = assets.asphalt;
+    const roadMat = new THREE.MeshStandardMaterial({
+      map: A.map, normalMap: A.normalMap, roughnessMap: A.roughnessMap,
+      color: wet ? 0x5a5d62 : 0x9a9a9a, roughness: wet ? 0.28 : 1, metalness: wet ? 0.15 : 0, envMapIntensity: wet ? 1.6 : 0.8,
+    });
+    roadMat.normalScale.set(0.8, 0.8);
+    const road = new THREE.Mesh(this.ribbon(-ROAD_WIDTH / 2, ROAD_WIDTH / 2, 0.02, 3.2, 6), roadMat); road.receiveShadow = true; scene.add(road);
+    this.roadMesh = road;
+    const marks = new THREE.Mesh(this.ribbon(-ROAD_WIDTH / 2, ROAD_WIDTH / 2, 0.03, 1), new THREE.MeshStandardMaterial({
+      map: markingTexture(), transparent: true, roughness: wet ? 0.3 : 0.7, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 }));
+    marks.receiveShadow = true; scene.add(marks);
+    // --- curbs (painted, bumpy)
+    const curbMat = new THREE.MeshStandardMaterial({ map: curbTexture(), roughness: wet ? 0.25 : 0.55 });
     for (const side of [-1, 1]) {
       const a = side * ROAD_WIDTH / 2, b = side * (ROAD_WIDTH / 2 + CURB_WIDTH);
       const g = this.ribbon(Math.min(a, b), Math.max(a, b), 0.06, 0.25);
       const m = new THREE.Mesh(g, curbMat); m.receiveShadow = true; scene.add(m);
     }
     // --- run-off asphalt strip
-    const runoffMat = new THREE.MeshStandardMaterial({ color: 0x3b3f36, roughness: 1 });
+    const runoffMat = new THREE.MeshStandardMaterial({ map: A.map, normalMap: A.normalMap, color: 0x7a7468, roughness: 1 });
     for (const side of [-1, 1]) {
       const a = side * (ROAD_WIDTH / 2 + CURB_WIDTH), b = side * (WALL_OFFSET);
-      const m = new THREE.Mesh(this.ribbon(Math.min(a, b), Math.max(a, b), 0.01, 0.5), runoffMat);
+      const m = new THREE.Mesh(this.ribbon(Math.min(a, b), Math.max(a, b), 0.01, 1, 2), runoffMat);
       m.receiveShadow = true; scene.add(m);
     }
     // --- barriers (walls with emissive stripe)
@@ -141,14 +151,15 @@ export class Track {
     void N;
   }
   lights: THREE.Vector3[] = [];
+  roadMesh: THREE.Mesh | null = null;
 
   /** Flat ribbon between lateral offsets l0..l1. vScale = texture repeats per meter along track. */
-  private ribbon(l0: number, l1: number, y: number, vScale: number): THREE.BufferGeometry {
+  private ribbon(l0: number, l1: number, y: number, vScale: number, uScale = 1): THREE.BufferGeometry {
     const N = this.N, pos: number[] = [], uv: number[] = [], idx: number[] = [];
     for (let i = 0; i <= N; i++) {
       const s = this.samples[i % N];
       const d = i === N ? this.length : s.dist;
-      for (const [l, u] of [[l0, 0], [l1, 1]] as const) {
+      for (const [l, u] of [[l0, 0], [l1, uScale]] as const) {
         pos.push(s.p.x + s.n.x * l, y, s.p.z + s.n.z * l);
         uv.push(u, d * vScale / 8);
       }
@@ -198,16 +209,11 @@ function canvasTex(w: number, h: number, draw: (c: CanvasRenderingContext2D) => 
   t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
   return t;
 }
-function roadTexture() {
+function markingTexture() {
   return canvasTex(256, 512, c => {
-    c.fillStyle = '#2b2d31'; c.fillRect(0, 0, 256, 512);
-    for (let i = 0; i < 9000; i++) {
-      const v = 30 + Math.random() * 40; c.fillStyle = `rgb(${v},${v},${v + 3})`;
-      c.fillRect(Math.random() * 256, Math.random() * 512, 1.5, 1.5);
-    }
-    c.fillStyle = '#e9e9e9'; c.fillRect(6, 0, 5, 512); c.fillRect(245, 0, 5, 512);
-    c.fillStyle = '#d8d8d8'; c.fillRect(125, 0, 6, 220);
-    c.fillStyle = 'rgba(0,0,0,0.18)'; c.fillRect(50, 0, 40, 512); c.fillRect(166, 0, 40, 512); // rubbered racing grooves
+    c.clearRect(0, 0, 256, 512);
+    c.fillStyle = 'rgba(240,240,240,0.92)'; c.fillRect(6, 0, 5, 512); c.fillRect(245, 0, 5, 512);
+    c.fillRect(125, 0, 6, 220);
   });
 }
 function curbTexture() {
