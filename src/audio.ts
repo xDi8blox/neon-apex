@@ -1,4 +1,4 @@
-/** Fully procedural Web Audio: engine (RPM-driven oscillators), tire screech, impacts, beeps. */
+/** Fully procedural Web Audio: growling engine (RPM-driven oscillators, AM flutter, distortion), tire screech, impacts, beeps. */
 export class AudioEngine {
   ctx: AudioContext | null = null;
   private master!: GainNode;
@@ -10,6 +10,7 @@ export class AudioEngine {
   private eng: OscillatorNode[] = [];
   private engGain!: GainNode;
   private engFilter!: BiquadFilterNode;
+  private growlLfo: OscillatorNode | null = null;
   private skidGain!: GainNode;
   private skidFilter!: BiquadFilterNode;
   private boostGain!: GainNode;
@@ -27,9 +28,16 @@ export class AudioEngine {
     // engine: saw + square an octave down + sub sine, through a resonant lowpass
     this.engFilter = ctx.createBiquadFilter(); this.engFilter.type = 'lowpass'; this.engFilter.Q.value = 4;
     this.engGain = ctx.createGain(); this.engGain.gain.value = 0;
-    this.engFilter.connect(this.engGain); this.engGain.connect(this.sfx);
-    const types: OscillatorType[] = ['sawtooth', 'square', 'sine'];
-    const mix = [0.35, 0.18, 0.5];
+    // demonic growl: amplitude-modulated (sub-harmonic flutter) and driven into a tanh waveshaper
+    const am = ctx.createGain(); am.gain.value = 0.7;
+    this.growlLfo = ctx.createOscillator(); this.growlLfo.type = 'square'; this.growlLfo.frequency.value = 10;
+    const lfoAmt = ctx.createGain(); lfoAmt.gain.value = 0.32; this.growlLfo.connect(lfoAmt); lfoAmt.connect(am.gain); this.growlLfo.start();
+    const dist = ctx.createWaveShaper(); const curve = new Float32Array(1024);
+    for (let i = 0; i < curve.length; i++) { const x = i / 511.5 - 1; curve[i] = Math.tanh(x * 3.2); }
+    dist.curve = curve; dist.oversample = '2x';
+    this.engFilter.connect(am); am.connect(dist); dist.connect(this.engGain); this.engGain.connect(this.sfx);
+    const types: OscillatorType[] = ['sawtooth', 'square', 'sine', 'sawtooth'];
+    const mix = [0.3, 0.18, 0.5, 0.22];
     types.forEach((t, i) => {
       const o = ctx.createOscillator(); o.type = t;
       const g = ctx.createGain(); g.gain.value = mix[i];
@@ -63,6 +71,8 @@ export class AudioEngine {
     this.eng[0].frequency.setTargetAtTime(f, t, 0.03);
     this.eng[1].frequency.setTargetAtTime(f * 0.5, t, 0.03);
     this.eng[2].frequency.setTargetAtTime(f * 0.5, t, 0.03);
+    this.eng[3].frequency.setTargetAtTime(f * 0.506, t, 0.03); // detuned: beats against the square for a snarl
+    this.growlLfo!.frequency.setTargetAtTime(f * 0.25, t, 0.05);
     this.engFilter.frequency.setTargetAtTime(300 + rpm * 0.25 + throttle * 1400, t, 0.05);
     this.engGain.gain.setTargetAtTime(active ? 0.22 + throttle * 0.25 : 0, t, 0.08);
     this.skidGain.gain.setTargetAtTime(active ? Math.min(skid, 1) * 0.25 : 0, t, 0.05);

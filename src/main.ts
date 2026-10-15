@@ -9,11 +9,11 @@ import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js';
 import { SSRPass } from 'three/examples/jsm/postprocessing/SSRPass.js';
 import { FXAAPass } from 'three/examples/jsm/postprocessing/FXAAPass.js';
 import { loadAssets, Assets } from './assets';
-import { buildCar, flameUniforms, setGlow, engineColor } from './carmodel';
+import { buildCar, flameUniforms, setGlow, engineColor, horn } from './carmodel';
 import { Track, ROAD_WIDTH, CURB_WIDTH, WALL_OFFSET, textTexture } from './track';
 import { CarPhysics, CarInput } from './car';
 import { buildEnvironment, hellUniforms, Environment } from './scenery';
-import { SkidMarks, Smoke, Shockwaves, Confetti } from './effects';
+import { SkidMarks, Smoke, Shockwaves, Confetti, sigilTexture } from './effects';
 import { AudioEngine } from './audio';
 import { Music } from './music';
 import { Input } from './input';
@@ -64,7 +64,7 @@ let trackDef!: TrackDef;
 let world: THREE.Group | null = null;
 let dirLight!: THREE.DirectionalLight;
 let sunOffset = new THREE.Vector3();
-let skids!: SkidMarks, smoke!: Smoke, sparks!: Smoke, shock!: Shockwaves, confetti!: Confetti;
+let skids!: SkidMarks, smoke!: Smoke, sparks!: Smoke, fire!: Smoke, shock!: Shockwaves, confetti!: Confetti;
 let worldEnv: Environment | null = null;
 let showroom: Showroom | null = null;
 
@@ -163,7 +163,9 @@ function ensureWorld(id: string, onProgress?: (f: number) => void): Promise<void
     dirLight = env.dirLight; sunOffset = env.sunDir.clone().multiplyScalar(300);
     renderer.toneMappingExposure = def.exposure;
     skids = new SkidMarks(world, [600, 1500, 3000][quality]);
-    smoke = new Smoke(world, [150, 400, 700][quality]);
+    smoke = new Smoke(world, [150, 400, 700][quality], [0.22, 0.17, 0.15]); // ash-dark tire smoke
+    fire = new Smoke(world, [160, 320, 520][quality], [1, 0.32, 0.05], true); // hellfire: Soul Burn trails, banishments
+    Object.assign(fire, { fade: 1.5, grow: 1.2, gravity: -5, drag: 1.2, baseSize: 0.9 });
     sparks = new Smoke(world, [120, 250, 400][quality], [1, 0.55, 0.15], true);
     Object.assign(sparks, { fade: 2.2, grow: -0.5, gravity: 14, drag: 0.6, baseSize: 0.45 });
     shock = new Shockwaves(world);
@@ -345,6 +347,12 @@ function takedown(r: Racer) {
   addScore(1000, 'BANISHED!', 'big red');
   slowmo(1.1); shake = 1; audio.boom(1);
   emitSparks(r.phys.pos, r.phys.velocity(new THREE.Vector3()), 40);
+  emitFire(r.phys.pos, r.phys.velocity(new THREE.Vector3()), 50, 6);
+  shock.spawn(r.phys.pos, 0xff2a08, true);
+}
+const fireP = new THREE.Vector3();
+function emitFire(p: THREE.Vector3, v: THREE.Vector3, n: number, spread = 3) {
+  for (let i = 0; i < n; i++) fire.emit(fireP.copy(p).setY(0.4 + Math.random() * 1.2), v, spread, 1.5);
 }
 function onDriftTick(dt: number) {
   const p = player.phys;
@@ -385,7 +393,8 @@ function nearMissTick(dt: number) {
   }
 }
 function fireShockwave() {
-  shock.spawn(player.phys.pos, 0xff4a10);
+  shock.spawn(player.phys.pos, 0xff4a10); shock.spawn(player.phys.pos, 0xff1a08, true);
+  emitFire(player.phys.pos, player.phys.velocity(new THREE.Vector3()), 60, 10);
   if (speedPass) speedPass.uniforms.uShock.value = 1;
   audio.boom(0.6); shake = Math.min(1, shake + 0.5);
   let hit = 0;
@@ -623,19 +632,37 @@ function raceOrder() {
   return [...racers].sort((a, b) => (a.finished && b.finished) ? a.finishTime - b.finishTime : (a.finished ? -1 : b.finished ? 1 : progress(b) - progress(a)));
 }
 function buildPodium() {
+  // the Throne of Ash: obsidian altar steps, bone trim, a burning sigil, flanking braziers and great horns
   const g = new THREE.Group();
   const s = track.samples[Math.floor(track.N * 0.03)];
-  const mat = new THREE.MeshStandardMaterial({ color: 0x1b2230, metalness: 0.6, roughness: 0.35 });
-  const trim = new THREE.MeshStandardMaterial({ color: 0x000000, emissive: new THREE.Color(trackDef.accent), emissiveIntensity: 1.5 });
-  const steps: [number, number, string][] = [[0, 1.2, '1'], [-4.4, 0.8, '2'], [4.4, 0.5, '3']];
+  const mat = new THREE.MeshStandardMaterial({ color: 0x120c0b, metalness: 0.4, roughness: 0.25, flatShading: true });
+  const boneM = new THREE.MeshStandardMaterial({ color: 0xcfbf9e, roughness: 0.7 });
+  const glowM = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xff4a10).multiplyScalar(3), toneMapped: false });
+  const steps: [number, number, string][] = [[0, 1.6, 'I'], [-4.6, 1.0, 'II'], [4.6, 0.6, 'III']];
   for (const [x, h, label] of steps) {
-    const b = new THREE.Mesh(new THREE.BoxGeometry(4.2, h, 5.6), mat); b.position.set(x, h / 2, 0); b.castShadow = b.receiveShadow = true; g.add(b);
-    const t = new THREE.Mesh(new THREE.BoxGeometry(4.25, 0.06, 5.65), trim); t.position.set(x, h, 0); g.add(t);
-    const plate = new THREE.Mesh(new THREE.PlaneGeometry(1.6, Math.min(0.9, h * 0.8)), new THREE.MeshBasicMaterial({ map: textTexture(label), toneMapped: false }));
-    plate.position.set(x, h / 2, 2.81); g.add(plate);
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.9, h, 6), mat); b.position.set(x, h / 2, 0); b.castShadow = b.receiveShadow = true; g.add(b);
+    const t = new THREE.Mesh(new THREE.TorusGeometry(2.55, 0.08, 4, 6), glowM); t.rotation.x = Math.PI / 2; t.rotation.z = Math.PI / 6; t.position.set(x, h, 0); g.add(t);
+    const plate = new THREE.Mesh(new THREE.PlaneGeometry(1.8, Math.min(0.9, h * 0.7)), new THREE.MeshBasicMaterial({ map: textTexture(label), toneMapped: false }));
+    plate.position.set(x, h / 2, 2.55); g.add(plate);
   }
+  // throne back with horns behind the winner
+  const back = new THREE.Mesh(new THREE.BoxGeometry(3.4, 4.5, 0.5), mat); back.position.set(0, 1.6 + 2.25, -2.4); back.castShadow = true; g.add(back);
+  const hornPts = [new THREE.Vector3(1.4, 0, 0), new THREE.Vector3(2.6, 1.6, 0.2), new THREE.Vector3(2.4, 3.6, 0.4), new THREE.Vector3(1.3, 4.6, 0.6)];
+  const hg = horn(hornPts, 0.45, 14);
+  for (const sx of [1, -1]) { const h = new THREE.Mesh(hg, boneM); h.scale.x = sx; h.position.set(0, 1.6 + 4.2, -2.4); h.castShadow = true; g.add(h); }
+  // burning sigil on the ground
+  const sig = new THREE.Mesh(new THREE.PlaneGeometry(16, 16).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: sigilTexture(), color: new THREE.Color(0xff3a10).multiplyScalar(2.5), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+  sig.position.set(0, 0.08, 1); g.add(sig);
+  // braziers either side
+  for (const x of [-8.2, 8.2]) {
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.35, 3.2, 6), mat); pole.position.set(x, 1.6, 0.5); g.add(pole);
+    const bowl = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 0.45, 0.6, 8, 1, true), mat); bowl.position.set(x, 3.4, 0.5); g.add(bowl);
+    const coal = new THREE.Mesh(new THREE.CircleGeometry(0.95, 8).rotateX(-Math.PI / 2), glowM); coal.position.set(x, 3.5, 0.5); g.add(coal);
+  }
+  const light = new THREE.PointLight(0xff5a1a, 60, 26, 1.6); light.position.set(0, 5, 3); g.add(light);
   g.position.copy(s.p); g.rotation.y = Math.atan2(s.n.x, s.n.z);
   world!.add(g); g.updateMatrixWorld(true);
+  g.userData.fires = [new THREE.Vector3(-8.2, 3.6, 0.5), new THREE.Vector3(8.2, 3.6, 0.5)].map(v => v.applyMatrix4(g.matrixWorld));
   return { g, steps };
 }
 function startPodium() {
@@ -653,6 +680,7 @@ function startPodium() {
     r.mesh.rotation.set(0, g.rotation.y + Math.PI, 0);
     r.flames.forEach(f => (f.visible = false));
   });
+  for (const f of g.userData.fires as THREE.Vector3[]) emitFire(f, new THREE.Vector3(), 40, 2);
   confetti.burst(new THREE.Vector3(g.position.x, 7, g.position.z));
   audio.chime(523, 4); setTimeout(() => audio.chime(659, 4), 350);
   music.intensity = 0;
@@ -701,12 +729,16 @@ function syncMeshes(dt: number, trails = true) {
     for (const f of r.flames) { f.visible = true; if (p.boosting) f.scale.set(1.25, 1.25, 1 + Math.random() * 0.8); else f.scale.set(0.45, 0.45, 0.15 + breath * 0.35 + Math.random() * 0.12); }
     r.boostGlow += ((p.boosting ? 1 : 0) - r.boostGlow) * Math.min(1, dt * 5);
     setGlow(r.glow, engineColor(r.car.kit), r.boostGlow, time + r.idx);
+    // Soul Burn hellfire trail from both exhausts; banished cars burn while they wreck
+    if (p.boosting && Math.random() < 0.35 + quality * 0.3) for (const f of r.flames) { f.getWorldPosition(wp); fire.emit(wp, p.velocity(tmpV).multiplyScalar(0.2), 0.8, 0.6); }
+    if (r.wreckT > 0 && Math.random() < 0.6) fire.emit(fireP.copy(p.pos).setY(0.8), p.velocity(tmpV).multiplyScalar(0.3), 2, 2);
     if (!trails) continue;
     const sliding = (p.slipRear > 0.14 || (r.input.handbrake && p.speed > 6) || (p.wheelspin > 0.85 && p.speed < 18 && r.input.throttle > 0.5)) && p.speed > 3 && !p.offroad;
     for (let w = 2; w < 4; w++) {
       r.wheels[w].getWorldPosition(wp);
       skids.add(r.name + w, wp, sliding);
       if (sliding && Math.random() < (quality + 1) * 0.25) smoke.emit(wp.setY(0.3), p.velocity(tmpV));
+      if (sliding && p.speed > 8 && Math.random() < (quality + 1) * 0.2) sparks.emit(wp.setY(0.25), p.velocity(tmpV).multiplyScalar(0.5), 3, 1.5); // drift embers
       else if (trackDef.wet && p.speed > 18 && Math.random() < (quality + 1) * 0.12) smoke.emit(wp.setY(0.2), p.velocity(tmpV).multiplyScalar(0.6), 1, 0.4); // road spray
     }
   }
@@ -739,6 +771,7 @@ function updateCamera(dt: number, modeOverride?: number) {
     fov = 45 + 15 * e;
   } else if (state === 'podium' && podium) {
     orbitT += dt * 0.22;
+    for (const f of podium.userData.fires as THREE.Vector3[]) for (let k = 0; k < 2; k++) fire.emit(f, tmpF.set(0, 0, 0), 0.9, 1.6);
     const c = podium.position;
     want.set(c.x + Math.cos(orbitT) * 14, 4.2 + Math.sin(orbitT * 0.7) * 1.2, c.z + Math.sin(orbitT) * 14);
     wantLook.set(c.x, 1.4, c.z); fov = 50; smooth = true;
@@ -865,7 +898,7 @@ function frame(ts?: number) {
   }
   if (state === 'replay') syncMeshes(dt, false);
   else if (state !== 'paused' && state !== 'podium') syncMeshes(dt);
-  if (state !== 'paused') { smoke.update(dt); sparks.update(dt); shock.update(dt); confetti.update(dt, time); }
+  if (state !== 'paused') { smoke.update(dt); sparks.update(dt); fire.update(dt); shock.update(dt); confetti.update(dt, time); }
   worldEnv?.update(dt, time, camera.position);
   if (racers.length) {
     let ov: number | undefined;

@@ -81,18 +81,30 @@ export class Smoke {
 }
 
 /** Expanding hellfire ring used for the Soul Burn blast. */
+export function sigilTexture() {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 256; const c = cv.getContext('2d')!;
+  c.strokeStyle = '#fff'; c.shadowColor = '#fff'; c.shadowBlur = 10; c.lineWidth = 7;
+  c.beginPath(); c.arc(128, 128, 118, 0, Math.PI * 2); c.stroke(); c.lineWidth = 3; c.beginPath(); c.arc(128, 128, 100, 0, Math.PI * 2); c.stroke();
+  c.lineWidth = 6; c.beginPath();
+  for (let i = 0; i <= 5; i++) { const a = -Math.PI / 2 + (i * 2 % 5) * Math.PI * 2 / 5; const x = 128 + Math.cos(a) * 100, y = 128 + Math.sin(a) * 100; i ? c.lineTo(x, y) : c.moveTo(x, y); }
+  c.stroke();
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+let sigilTex: THREE.Texture | null = null;
 export class Shockwaves {
-  private items: { mesh: THREE.Mesh; t: number }[] = [];
+  private items: { mesh: THREE.Mesh; t: number; grow: number; spin: number }[] = [];
   private geo = new THREE.RingGeometry(0.93, 1, 64).rotateX(-Math.PI / 2);
+  private plane = new THREE.PlaneGeometry(2, 2).rotateX(-Math.PI / 2);
   constructor(private parent: THREE.Object3D) {}
-  spawn(p: THREE.Vector3, color = 0x7ff6ff) {
-    const mesh = new THREE.Mesh(this.geo, new THREE.MeshBasicMaterial({ color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, side: THREE.DoubleSide }));
-    mesh.position.set(p.x, 0.4, p.z); this.parent.add(mesh); this.items.push({ mesh, t: 0 });
+  spawn(p: THREE.Vector3, color = 0xff4a10, sigil = false) {
+    if (sigil && !sigilTex) sigilTex = sigilTexture();
+    const mesh = new THREE.Mesh(sigil ? this.plane : this.geo, new THREE.MeshBasicMaterial({ color: new THREE.Color(color).multiplyScalar(sigil ? 3 : 1.5), map: sigil ? sigilTex : null, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, side: THREE.DoubleSide }));
+    mesh.position.set(p.x, sigil ? 0.15 : 0.4, p.z); this.parent.add(mesh); this.items.push({ mesh, t: 0, grow: sigil ? 9 : 22, spin: sigil ? 2.5 : 0 });
   }
   update(dt: number) {
     for (const it of this.items) {
       it.t += dt; const k = it.t / 0.7;
-      it.mesh.scale.setScalar(1 + k * 22);
+      it.mesh.scale.setScalar(1 + k * it.grow); it.mesh.rotation.y += it.spin * dt;
       (it.mesh.material as THREE.MeshBasicMaterial).opacity = Math.pow(Math.max(0, 1 - k), 1.5) * 0.9;
       if (k >= 1) { this.parent.remove(it.mesh); (it.mesh.material as THREE.Material).dispose(); }
     }
