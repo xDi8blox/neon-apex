@@ -200,3 +200,10 @@ Third-party assets and their licenses are listed in [CREDITS.md](CREDITS.md). Th
 ## License
 
 Code: [MIT](LICENSE) © 2026 Death. Bundled assets keep their own licenses (see CREDITS.md).
+
+### Mobile (Low preset) per track
+![Lava Fields](screenshots/mobile-lava-fields.png)
+![Bone Cathedral](screenshots/mobile-bone-cathedral.png)
+![Ashen Storm](screenshots/mobile-ashen-storm.png)
+
+Regenerate with `node scripts/mobile-tracks.mjs` (iPhone 13 landscape) and `QUALITY=2 node scripts/screenshots.mjs`.

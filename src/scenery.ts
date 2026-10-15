@@ -43,7 +43,7 @@ function skyMaterial(def: TrackDef, oct: number, env = false) {
         vec3 col = mix(uHor, uMid, smoothstep(-0.02, 0.18, y)); col = mix(col, uTop, smoothstep(0.18, 0.75, y));
         col = mix(col, uHor * 0.35, smoothstep(0.0, -0.25, y));
         float sd = dot(d, uSun);
-        if (uSunSize > 0.0) { col += uSunCol * (smoothstep(1.0 - uSunSize * 0.02, 1.0 - uSunSize * 0.015, sd) * 6.0 + pow(max(sd, 0.0), 24.0) * 0.6 + pow(max(sd, 0.0), 4.0) * 0.1); }
+        if (uSunSize > 0.0) { col += uSunCol * (smoothstep(1.0 - uSunSize * 0.02, 1.0 - uSunSize * 0.015, sd) * 6.0 + pow(max(sd, 0.0), 24.0) * 0.6 + pow(max(sd, 0.0), 4.0) * 0.1 * (1.0 - 0.7 * uStars)); }
         // smoke/ash clouds, lit from below by the fires
         vec2 cp = d.xz / max(0.08, y + 0.12) * 1.4 + vec2(uTime * 0.012, uTime * 0.004);
         float c = fbm(cp) * 0.7 + fbm(cp * 3.1 - uTime * 0.02) * 0.3;
@@ -153,7 +153,7 @@ export function buildEnvironment(scene: THREE.Scene, root: THREE.Object3D, rende
   const skyGeo = new THREE.SphereGeometry(2800, 48, 24);
   const envScene = new THREE.Scene();
   const envSky = new THREE.Mesh(skyGeo, skyMaterial(def, 3, true)); envScene.add(envSky);
-  const glowSpots = new THREE.MeshBasicMaterial({ color: new THREE.Color(def.lavaColor).multiplyScalar(4), side: THREE.DoubleSide });
+  const glowSpots = new THREE.MeshBasicMaterial({ color: new THREE.Color(def.lavaColor).multiplyScalar(def.lava > 0 ? 2.2 : 0.35), side: THREE.DoubleSide });
   const lavaFloor = new THREE.Mesh(new THREE.CircleGeometry(2500, 16).rotateX(-Math.PI / 2), glowSpots); lavaFloor.position.y = -60; lavaFloor.scale.setScalar(def.lava > 0 ? 1 : 0.6); envScene.add(lavaFloor);
   const pmrem = new THREE.PMREMGenerator(renderer);
   (scene.environment as THREE.Texture | null)?.dispose();
@@ -213,17 +213,20 @@ export function buildEnvironment(scene: THREE.Scene, root: THREE.Object3D, rende
   const segs = [110, 170, 230][quality], SIZE = 3000;
   const tg = new THREE.PlaneGeometry(SIZE, SIZE, segs, segs); tg.rotateX(-Math.PI / 2); tg.translate(cx, 0, cz);
   const tp = tg.getAttribute('position'), heat = new Float32Array(tp.count), colors = new Float32Array(tp.count * 3);
-  const rc = new THREE.Color(), rock = new THREE.Color(0x1d1513), ash = new THREE.Color(0x4a403a), scorch = new THREE.Color(0x3a0c04);
+  const rc = new THREE.Color(), rock = new THREE.Color(def.rock), ash = new THREE.Color(def.ashRock), scorch = new THREE.Color(def.scorch);
   for (let i = 0; i < tp.count; i++) {
     const x = tp.getX(i), z = tp.getZ(i), h = heightAt(x, z); tp.setY(i, h);
     heat[i] = Math.max(0, Math.min(1, 1 - (h - LAVA_Y) / 2.2));
-    rc.copy(rock).lerp(ash, sstep(8, 40, h) * (0.6 + 0.4 * hash2(x, z))).lerp(scorch, heat[i] * 0.8).multiplyScalar(0.75 + hash2(z, x) * 0.5);
+    const strata = 0.5 + 0.5 * Math.sin(h * 1.7 + fbm(x * 0.05, z * 0.05, 2) * 3);
+    rc.copy(rock).lerp(ash, Math.min(1, sstep(4, 30, h) * (0.5 + 0.5 * hash2(x, z)) + strata * 0.25)).lerp(scorch, heat[i] * 0.85).multiplyScalar(0.6 + hash2(z, x) * 0.8);
     colors.set([rc.r, rc.g, rc.b], i * 3);
   }
   tg.setAttribute('aHeat', new THREE.BufferAttribute(heat, 1)); tg.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   tg.computeVertexNormals();
+  { const uv = tg.getAttribute('uv'); for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 420, uv.getY(i) * 420); }
   const lavaRGB = new THREE.Color(def.lavaColor);
-  const terrainMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55, metalness: 0.15, flatShading: true, envMapIntensity: 0.9 });
+  const terrainMat = new THREE.MeshStandardMaterial({ vertexColors: true, map: _assets.asphalt.map, normalMap: _assets.asphalt.normalMap, roughness: 0.6, metalness: 0.15, flatShading: true, envMapIntensity: 0.9 });
+  terrainMat.normalScale.set(1.4, 1.4);
   terrainMat.onBeforeCompile = sh => {
     sh.uniforms.uTime = hellUniforms.uTime; sh.uniforms.uLava = { value: lavaRGB };
     sh.vertexShader = 'attribute float aHeat; varying float vHeat;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvHeat = aHeat;');
@@ -346,7 +349,7 @@ export function buildEnvironment(scene: THREE.Scene, root: THREE.Object3D, rende
     for (let i = 0; i < N * 2; i++) { if (Math.abs(track.samples[i % N].curvature) < 0.0025) { run++; if (run > bestLen) { bestLen = run; best = i - run + 1; } } else run = 0; }
     const ribG = new THREE.TorusGeometry(WALL_OFFSET + 3, 0.7, 6, quality > 0 ? 24 : 14, Math.PI);
     const ribs = Math.min(18, Math.floor(bestLen / 6));
-    const ribMesh = new THREE.InstancedMesh(ribG, new THREE.MeshStandardMaterial({ color: 0x9a8c74, roughness: 0.8 }), ribs);
+    const ribMesh = new THREE.InstancedMesh(ribG, new THREE.MeshStandardMaterial({ color: 0xd8ccb0, roughness: 0.8, emissive: 0x8a8070, emissiveIntensity: 0.55 }), ribs);
     for (let k = 0; k < ribs; k++) {
       const s = track.samples[(best + 3 + k * 6) % N];
       m.compose(p.set(s.p.x, -2, s.p.z), q.setFromAxisAngle(UP, Math.atan2(s.n.x, s.n.z) + Math.PI / 2), sc.set(1, 1.35, 1)); ribMesh.setMatrixAt(k, m);

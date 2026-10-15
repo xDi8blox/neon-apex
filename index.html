@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#0b0605" />
   <meta name="description" content="HELLDRIVE - a demonic 3D browser racing game built with Three.js" />
   <title>HELLDRIVE — Race Through Hell</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔥</text></svg>" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M50 5c5 18 30 28 30 55a30 30 0 0 1-60 0c0-14 9-24 14-32 0 13 5 18 10 18 0-14-5-26 6-41z' fill='%23ff4a10'/></svg>" />
 </head>
 <body>
   <div id="app"></div>
@@ -33,14 +33,14 @@
   <div id="replay-badge" class="hidden"><i></i>REPLAY <em>tap / ENTER to skip</em></div>
 
   <div id="touch">
-    <div class="t-top"><button id="t-pause" data-tap="Escape">II</button><button id="t-cam" data-tap="KeyC">CAM</button><button id="t-tilt">TILT OFF</button><button id="t-fs">⛶</button></div>
-    <div class="t-left"><div class="tb steer" data-hold="left">◀</div><div class="tb steer" data-hold="right">▶</div></div>
+    <div class="t-top"><button id="t-pause" data-tap="Escape">II</button><button id="t-cam" data-tap="KeyC">CAM</button><button id="t-tilt">TILT OFF</button><button id="t-fs" aria-label="Fullscreen"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path class="st" d="M3 9V3h6M15 3h6v6M21 15v6h-6M9 21H3v-6"/></svg></button></div>
+    <div class="t-left"><div class="tb steer" data-hold="left" aria-label="Steer left"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 3 L5 12 L16 21 L14 12 Z"/></svg></div><div class="tb steer" data-hold="right" aria-label="Steer right"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3 L19 12 L8 21 L10 12 Z"/></svg></div></div>
     <div class="t-right">
       <div class="col"><div class="tb small nitro" data-hold="nitro">SOUL</div><div class="tb small" data-hold="drift">DRIFT</div></div>
       <div class="col"><div class="tb brake" data-hold="brake">BRAKE</div><div class="tb gas" data-hold="gas">GAS</div></div>
     </div>
   </div>
-  <div id="rotate"><div>⟳</div><p>Rotate your phone to landscape</p></div>
+  <div id="rotate"><div><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path class="st" d="M20 12a8 8 0 1 1-2.3-5.6M20 3v5h-5"/></svg></div><p>Rotate your phone to landscape</p></div>
   <div id="letterbox"><div class="top"></div><div class="bot"><span id="lb-title">HELLDRIVE</span><em>ENTER / TAP to skip</em></div></div>
   <div id="wipe"></div>
   <div id="crack"><svg viewBox="0 0 1000 600" preserveAspectRatio="none"><path d="M500 300 L430 210 L452 140 L380 40 L360 0"/><path d="M500 300 L610 250 L700 268 L820 170 L1000 140"/><path d="M500 300 L560 410 L520 480 L590 600"/><path d="M500 300 L380 330 L290 300 L160 380 L0 360"/><path d="M430 210 L300 190 L220 90"/><path d="M700 268 L760 380 L900 430"/><path d="M380 330 L340 450 L250 520"/></svg></div>
@@ -72,9 +72,9 @@
     <div class="menu-wide">
       <h2>CHOOSE YOUR TORMENT</h2>
       <div class="cards" id="mode-cards">
-        <div class="mcard" data-mode="quick"><b>DAMNED SPRINT</b><p>One race, your rules. Pick the hellscape, laps and rivals.</p><i>🔥</i></div>
-        <div class="mcard" data-mode="champ"><b>INFERNAL CROWN</b><p>3 rounds through every circle. Points 10-8-6-5-4-3-2-1. The throne decides who rules.</p><i>👑</i></div>
-        <div class="mcard" data-mode="tt"><b>SOUL TRIAL</b><p>Just you and the clock, hunted by your own ghost.</p><i>💀</i></div>
+        <div class="mcard" data-mode="quick"><b>DAMNED SPRINT</b><p>One race, your rules. Pick the hellscape, laps and rivals.</p><i><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-7 0 3 1 4 2 4 0-3-1-6 1-9z"/></svg></i></div>
+        <div class="mcard" data-mode="champ"><b>INFERNAL CROWN</b><p>3 rounds through every circle. Points 10-8-6-5-4-3-2-1. The throne decides who rules.</p><i><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 18 L2 6 L8 11 L12 3 L16 11 L22 6 L21 18 Z M3 20h18v2H3z"/></svg></i></div>
+        <div class="mcard" data-mode="tt"><b>SOUL TRIAL</b><p>Just you and the clock, hunted by your own ghost.</p><i><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M12 2a8 8 0 0 0-8 8c0 3 1.5 5 3 6v4h10v-4c1.5-1 3-3 3-6a8 8 0 0 0-8-8zM8.5 9a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM12 14l-1.3 2h2.6z"/></svg></i></div>
       </div>
       <button class="back" data-back>BACK</button>
     </div>
@@ -96,7 +96,7 @@
   <div id="scr-garage" class="screen menu garage hidden">
     <div class="gpanel">
       <h2>THE FORGE</h2>
-      <div class="gname"><button id="g-prev" class="arrow">◀</button><div><b id="g-name">Hellhound</b><p id="g-tag"></p><p id="g-lore" class="lore"></p></div><button id="g-next" class="arrow">▶</button></div>
+      <div class="gname"><button id="g-prev" class="arrow" aria-label="Previous car"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 3 L5 12 L16 21 L14 12 Z"/></svg></button><div><b id="g-name">Hellhound</b><p id="g-tag"></p><p id="g-lore" class="lore"></p></div><button id="g-next" class="arrow" aria-label="Next car"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3 L19 12 L8 21 L10 12 Z"/></svg></button></div>
       <div id="g-stats"></div>
       <div class="lbl wide">PAINT</div>
       <div id="g-paint"></div>

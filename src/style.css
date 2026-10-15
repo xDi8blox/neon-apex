@@ -347,3 +347,16 @@ body.racing #embers { display: none; }
 }
 .menu-col .logo { font-size: 70px; margin-left: 14px; }
 @media (max-height: 500px), (max-width: 700px) { .menu-col .logo { font-size: 44px; } }
+
+/* inline SVG icons (no emoji fallback on iOS) */
+.ico { width: 1em; height: 1em; display: block; fill: currentColor; filter: drop-shadow(0 0 4px rgba(255,80,0,.7)); }
+.ico .st { fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.tb.steer { color: #ffb070; font-size: 44px; }
+.tb.steer.on { color: #fff2d0; }
+button.arrow { display: flex; align-items: center; justify-content: center; font-size: 22px; color: #ffb070; }
+#t-fs .ico { font-size: 16px; }
+#rotate div .ico { font-size: 72px; color: #ff6a20; margin: 0 auto; }
+.mcard i { filter: none; opacity: .55; color: #ff5a1a; font-size: 64px; }
+.mcard i .ico { filter: drop-shadow(0 0 10px rgba(255,70,0,.8)); }
+.logo::before, .logo::after { font-family: 'Pirata One', Georgia, serif; }
+@media (max-height: 500px), (max-width: 700px) { .tb.steer { font-size: 38px; } .mcard i { font-size: 34px; } }

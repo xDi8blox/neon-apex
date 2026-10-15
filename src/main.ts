@@ -82,19 +82,19 @@ const SpeedShader = {
       // heat haze: shimmering refraction rising off the lava, strongest low on screen
       if (uHeat > 0.001) { float hz = uHeat * smoothstep(0.75, 0.15, vUv.y); uv += vec2(sin(vUv.y * 90.0 + uTime * 5.0) + sin(vUv.x * 37.0 - uTime * 3.3) * 0.5, cos(vUv.x * 70.0 + uTime * 4.0)) * 0.0011 * hz; }
       d = uv - 0.5;
-      float blur = (uAmount + uNitro*0.8) * smoothstep(0.12, 0.7, r);
+      float blur = (uAmount + uNitro*0.35) * smoothstep(0.12, 0.7, r);
       vec3 c = vec3(0.0);
       for (int i = 0; i < 10; i++) { float s = 1.0 - blur * float(i) * 0.011; c += texture2D(tDiffuse, 0.5 + d * s).rgb; }
       c /= 10.0;
       if (uNitro > 0.01) {
-        float ca = uNitro * 0.006 * r;
+        float ca = uNitro * 0.003 * r;
         c.r = mix(c.r, texture2D(tDiffuse, uv + d * ca).r, 0.6);
         c.b = mix(c.b, texture2D(tDiffuse, uv - d * ca).b, 0.6);
         float ang = atan(d.y, d.x);
         float seg = floor(ang * 60.0);
-        float line = step(0.82, h(seg + floor(uTime * 18.0) * 7.0));
-        c += vec3(1.0, 0.42, 0.1) * smoothstep(0.28, 0.75, r) * line * uNitro * 0.65;
-        c = mix(c, c * vec3(1.25, 0.85, 0.7), uNitro * 0.5); // Soul Burn: hellfire grade
+        float line = step(0.9, h(seg + floor(uTime * 18.0) * 7.0));
+        c += vec3(1.0, 0.42, 0.1) * smoothstep(0.4, 0.85, r) * line * uNitro * 0.28;
+        c = mix(c, c * vec3(1.12, 0.94, 0.86), uNitro * 0.4); // Soul Burn: hellfire grade
       }
       float l = dot(c, vec3(0.299, 0.587, 0.114));
       c = mix(c, vec3(l) * vec3(1.2, 0.75, 0.6), uSlow * 0.55 * smoothstep(0.1, 0.6, r));
@@ -773,7 +773,9 @@ function updateCamera(dt: number, modeOverride?: number) {
     orbitT += dt * 0.22;
     for (const f of podium.userData.fires as THREE.Vector3[]) for (let k = 0; k < 2; k++) fire.emit(f, tmpF.set(0, 0, 0), 0.9, 1.6);
     const c = podium.position;
-    want.set(c.x + Math.cos(orbitT) * 14, 4.2 + Math.sin(orbitT * 0.7) * 1.2, c.z + Math.sin(orbitT) * 14);
+    // sweep only across the front of the throne so the camera never passes behind (or through) it
+    const ang = podium.rotation.y + Math.sin(orbitT) * 0.85;
+    want.set(c.x + Math.sin(ang) * 15, 4.4 + Math.sin(orbitT * 0.7) * 1.0, c.z + Math.cos(ang) * 15);
     wantLook.set(c.x, 1.4, c.z); fov = 50; smooth = true;
   } else if (m === 0) {
     const vel = p.velocity(new THREE.Vector3());
@@ -816,7 +818,7 @@ function updateCamera(dt: number, modeOverride?: number) {
   if (shake > 0.001) { camera.position.x += (Math.random() - 0.5) * shake * 0.5; camera.position.y += (Math.random() - 0.5) * shake * 0.4; shake *= Math.exp(-dt * 6); }
   if (m < 2 && speed > 45 && state === 'race') camera.position.y += (Math.random() - 0.5) * (speed - 45) * 0.0015;
   camera.lookAt(camLook);
-  if (p.boosting && state !== 'intro' && m < 2) fov += 10;
+  if (p.boosting && state !== 'intro' && m < 2) fov += 6;
   camera.fov += (fov - camera.fov) * Math.min(1, dt * 4);
   camera.updateProjectionMatrix();
   if (speedPass) {
@@ -1067,7 +1069,7 @@ function garageCar() {
     $('g-paint').querySelectorAll('i').forEach(x => x.classList.remove('sel')); el.classList.add('sel'); audio.beep(1500, 0.03);
   }));
   $('g-best').innerHTML = TRACKS.map(t => { const b = getBest(t.id, c.id); return `${t.name}: ${isFinite(b) ? fmt(b) : '--'}`; }).join('<br>');
-  $('g-select').textContent = settings.car === c.id ? 'BOUND ✓' : 'BIND SOUL';
+  $('g-select').textContent = settings.car === c.id ? 'BOUND \u2713\uFE0E' : 'BIND SOUL';
 }
 $('g-prev').onclick = () => { gIdx = (gIdx + CARS.length - 1) % CARS.length; garageCar(); audio.swish(); };
 $('g-next').onclick = () => { gIdx = (gIdx + 1) % CARS.length; garageCar(); audio.swish(); };
@@ -1095,7 +1097,7 @@ $('o-layout').onchange = e => { settings.layout = val(e) as 'standard' | 'swappe
 $('o-tilt').onchange = async e => {
   const on = await input.touch.setTilt(val(e) === '1'); settings.tilt = on; saveSettings();
   ($('o-tilt') as HTMLSelectElement).value = on ? '1' : '0';
-  if (on) $('o-note').textContent = 'Tilt on: roll your phone like a steering wheel (◀ ▶ still work).';
+  if (on) $('o-note').textContent = 'Tilt on: roll your phone like a steering wheel (the steer buttons still work).';
 };
 $('o-fps').onchange = e => { settings.showFps = val(e) === '1'; hud.showFps = settings.showFps; saveSettings(); };
 $('o-reset').onclick = () => {
