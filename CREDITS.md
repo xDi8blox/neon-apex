@@ -9,6 +9,8 @@ nitro flame shader, all audio) is generated procedurally at runtime and is part 
 | `public/models/ferrari.glb`, `public/models/ferrari_ao.png` | "Ferrari 458 Italia" | **vicent091036** | Sketchfab (model 57bf6cc56931426e87494f554df1dab6), redistributed in the [three.js examples](https://github.com/mrdoob/three.js/tree/dev/examples/models/gltf) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
 | `public/models/ferrari_lod.glb` | Derivative of the above: normals/UVs stripped, simplified to ~15% with meshoptimizer, meshopt-compressed (EXT_meshopt_compression) | derived by this project | — | CC BY 4.0 (inherits) |
 | `public/hdri/venice_sunset_{1k,2k}.hdr` | "Venice Sunset" HDRI | Greg Zaal | [Poly Haven](https://polyhaven.com/a/venice_sunset) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `public/hdri/shanghai_bund_{1k,2k}.hdr` | "Shanghai Bund" HDRI (Neon Harbour night sky) | Greg Zaal | [Poly Haven](https://polyhaven.com/a/shanghai_bund) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `public/hdri/kloofendal_overcast_puresky_{1k,2k}.hdr` | "Kloofendal Overcast (Pure Sky)" HDRI (Highland Storm) | Greg Zaal | [Poly Haven](https://polyhaven.com/a/kloofendal_overcast_puresky) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
 | `public/textures/asphalt_*.{ktx2,jpg}` | Asphalt025C (color, normal GL, roughness) | ambientCG (Lennart Demes) | [ambientCG](https://ambientcg.com/view?id=Asphalt025C) | [CC0 1.0](https://docs.ambientcg.com/license/) |
 | `public/textures/grass_*.{ktx2,jpg}` | Grass004 (color, normal GL, roughness) | ambientCG (Lennart Demes) | [ambientCG](https://ambientcg.com/view?id=Grass004) | [CC0 1.0](https://docs.ambientcg.com/license/) |
 | `public/draco/*` | Draco glTF decoder | Google | three.js `examples/jsm/libs/draco` | Apache-2.0 |
@@ -19,3 +21,6 @@ nitro flame shader, all audio) is generated procedurally at runtime and is part 
 **Note on the car model:** the original Sketchfab page now reports the model as disabled. The CC BY 4.0 attribution above is the one used by three.js, which redistributes the file. If you need certainty before a commercial use, swap in a model whose license you can verify directly. `src/carmodel.ts` maps materials by name, so another glTF car only needs its material and wheel node names updated.
 
 Sound: none. All audio is synthesized with the Web Audio API.
+
+
+The four cars share the CC BY 4.0 Ferrari model above; their bodykits (wings, splitters, light bar, mud flaps, ducktail, underglow) are procedural geometry made for this project. Music and all sound effects are synthesized at runtime with Web Audio (no samples).

@@ -56,6 +56,31 @@
 
 **Audio**: fully procedural Web Audio (engine with RPM pitch, tire screech, nitro roar and whoosh, impacts, beeps) with a mute toggle. No audio files are used.
 
+## Full game (v2)
+
+- **Loading screen** with animated neon car, progress bar and gameplay tips.
+- **Menus** with slide/skew transitions, a neon wipe between worlds and attract-mode camera swoops behind every screen.
+- **Modes:** Quick Race · Championship (3 rounds, every circuit, points 10-8-6-5-4-3-2-1, standings between rounds, champion screen) · Time Trial (best lap saved as a translucent ghost + live delta).
+- **Garage:** 4 cars (Stradale, GT Apex, Storm Rally, Neon Drifter) with different physics and bodykits, stat bars, paint picker, rotating 3D showroom (drag to spin).
+- **3 tracks:** Sunset Circuit (golden hour, dry) · Neon Harbour (night city, wet streets, neon barrier strips) · Highland Storm (overcast, heavy rain, reduced grip, road spray).
+- **Options:** graphics quality, SFX and music volume, default camera, km/h / mph, touch layout (steer left/right), tilt steering, FPS counter, reset records. Difficulty, laps and opponents on the track screen.
+- **Fun systems:** drift combos up to ×5 with popups (wall hit loses the combo), near misses with slow-mo, bumps and TAKEDOWNS, nitro shockwave (ring + screen ripple, shoves rivals), PERFECT START / jump-start bog, sparks, finish-line slow-mo, a cinematic replay of the last ~10 s, then a podium with confetti and results.
+- **Procedural synthwave soundtrack** (menu and race intensities) on its own volume bus.
+
+| | |
+|---|---|
+| ![Loading](screenshots/loading.png) | ![Main menu](screenshots/menu.png) |
+| ![Modes](screenshots/modes.png) | ![Track select](screenshots/tracks.png) |
+| ![Garage](screenshots/garage.png) | ![Garage - Neon Drifter](screenshots/garage-drifter.png) |
+| ![Options](screenshots/options.png) | ![Neon Harbour](screenshots/night-harbour.png) |
+| ![Highland Storm](screenshots/rain-highland.png) | ![Drift combo + near miss](screenshots/combo-nearmiss.png) |
+| ![Shockwave](screenshots/shockwave.png) | ![Takedown](screenshots/takedown.png) |
+| ![Replay](screenshots/replay.png) | ![Podium](screenshots/podium.png) |
+| ![Championship standings](screenshots/standings.png) | ![Mobile garage](screenshots/mobile-garage.png) |
+| ![Mobile track select](screenshots/mobile-tracks.png) | ![Mobile race](screenshots/mobile.png) |
+
+Tests: `npm run test:sim` (AI on every track × car, no wall contacts), `npm run test:mobile`, `npm run test:flow` (menus, garage, perfect start, 3-round championship, time-trial ghost). Screens: `node scripts/screens.mjs`.
+
 ## Controls
 
 | Action | Keyboard | Gamepad (standard mapping) |
